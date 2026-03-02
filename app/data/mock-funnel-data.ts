@@ -5,17 +5,14 @@ import type {
   FunnelStageData,
   LostByStageItem,
   MetricMode,
+  DealOutcome,
 } from '@/lib/types';
 import { mockStages } from './mock-stages';
 import { mockDeals, type MockDeal } from './mock-deals';
+import type { ActiveFunnelColumn } from '@/lib/funnel-columns';
+import { buildStageTemplatesFromColumns } from '@/lib/funnel-columns';
 
-const STAGE_SORT_ORDER = new Map(
-  mockStages.map((stage) => [stage.stage_column_id, stage.stage_sort_order])
-);
-
-function getStageSortOrder(stageId: number): number | null {
-  return STAGE_SORT_ORDER.get(stageId) ?? null;
-}
+type ReassignedDeal = MockDeal;
 
 function average(values: number[]): number | null {
   if (values.length === 0) return null;
@@ -31,39 +28,50 @@ function median(values: number[]): number | null {
   return (sorted[middle - 1] + sorted[middle]) / 2;
 }
 
-function buildStageMetrics(deals: MockDeal[], metricMode: MetricMode): FunnelStageData[] {
-  const stagesSorted = [...mockStages].sort((a, b) => a.stage_sort_order - b.stage_sort_order);
+function buildStageMetrics(
+  deals: ReassignedDeal[],
+  metricMode: MetricMode,
+  stageTemplates?: FunnelStageData[],
+  activeColumns?: ActiveFunnelColumn[],
+): FunnelStageData[] {
+  const source = stageTemplates ?? mockStages;
+  const stagesSorted = [...source].sort((a, b) => a.stage_sort_order - b.stage_sort_order);
   const lastStageSortOrder = stagesSorted[stagesSorted.length - 1]?.stage_sort_order ?? 0;
+
+  // Build local sort order map from the active stages
+  const localSortOrder = new Map(source.map((s) => [s.stage_column_id, s.stage_sort_order]));
+  const getSort = (colId: number) => localSortOrder.get(colId) ?? null;
+  const roleByColumnId = new Map(
+    (activeColumns ?? []).map((column) => [column.column_id, column.role]),
+  );
 
   return stagesSorted.map((stage) => {
     const currentStageDeals = deals.filter((deal) => deal.stage_column_id === stage.stage_column_id);
-    const enteredDeals = deals.filter((deal) => {
-      const sortOrder = getStageSortOrder(deal.stage_column_id);
-      return sortOrder != null && sortOrder >= stage.stage_sort_order;
-    });
+    const role = roleByColumnId.get(stage.stage_column_id) ?? 'stage';
+    const enteredDeals = role === 'stage'
+      ? deals.filter((deal) => {
+          const sortOrder = getSort(deal.stage_column_id);
+          return sortOrder != null && sortOrder >= stage.stage_sort_order;
+        })
+      : currentStageDeals;
 
-    const movedForwardCount = deals.filter((deal) => {
-      const sortOrder = getStageSortOrder(deal.stage_column_id);
-      return sortOrder != null && sortOrder > stage.stage_sort_order;
-    }).length;
+    const movedForwardCount = role === 'stage'
+      ? deals.filter((deal) => {
+          const sortOrder = getSort(deal.stage_column_id);
+          return sortOrder != null && sortOrder > stage.stage_sort_order;
+        }).length
+      : 0;
 
     const dealsEntered = enteredDeals.length;
-    const isLastStage = stage.stage_sort_order >= lastStageSortOrder;
+    const isLastStage = role !== 'stage' || stage.stage_sort_order >= lastStageSortOrder;
 
-    // Amount metrics: only compute when metricMode === 'amount'
-    let totalAmount: number | null = null;
-    let dealsWithAmount = 0;
-    let dealsWithoutAmount = dealsEntered;
-    let avgAmount: number | null = null;
-
-    if (metricMode === 'amount') {
-      const enteredWithAmount = enteredDeals.filter((deal) => deal.deal_amount != null);
-      dealsWithAmount = enteredWithAmount.length;
-      dealsWithoutAmount = dealsEntered - dealsWithAmount;
-      const sum = enteredWithAmount.reduce((s, deal) => s + (deal.deal_amount ?? 0), 0);
-      totalAmount = dealsWithAmount > 0 ? sum : null;
-      avgAmount = dealsWithAmount > 0 ? sum / dealsWithAmount : null;
-    }
+    // Keep amount aggregates available in both modes so the chart can show count + amount together.
+    const enteredWithAmount = enteredDeals.filter((deal) => deal.deal_amount != null);
+    const dealsWithAmount = enteredWithAmount.length;
+    const dealsWithoutAmount = dealsEntered - dealsWithAmount;
+    const amountSum = enteredWithAmount.reduce((sum, deal) => sum + (deal.deal_amount ?? 0), 0);
+    const totalAmount = dealsWithAmount > 0 ? amountSum : null;
+    const avgAmount = dealsWithAmount > 0 ? amountSum / dealsWithAmount : null;
 
     const wonFromStage = enteredDeals.filter((deal) => deal.outcome === 'won').length;
     const lostOnStage = currentStageDeals.filter((deal) => deal.outcome === 'lost').length;
@@ -88,7 +96,9 @@ function buildStageMetrics(deals: MockDeal[], metricMode: MetricMode): FunnelSta
       drop_off_rate: dealsEntered > 0 ? lostOnStage / dealsEntered : null,
       avg_duration_days: average(closedVisits),
       median_duration_days: median(closedVisits),
-      deals_currently_on_stage: currentStageDeals.filter((deal) => deal.outcome === 'in_progress').length,
+      deals_currently_on_stage: role === 'stage'
+        ? currentStageDeals.filter((deal) => deal.outcome === 'in_progress').length
+        : currentStageDeals.length,
       stale_deals_count: currentStageDeals.filter(
         (deal) => deal.outcome === 'in_progress' && deal.is_stale
       ).length,
@@ -96,7 +106,11 @@ function buildStageMetrics(deals: MockDeal[], metricMode: MetricMode): FunnelSta
   });
 }
 
-function buildLostByStage(deals: MockDeal[], stages: FunnelStageData[], metricMode: MetricMode): LostByStageItem[] {
+function buildLostByStage(
+  deals: ReassignedDeal[],
+  stages: FunnelStageData[],
+  metricMode: MetricMode,
+): LostByStageItem[] {
   return stages.map((stage) => {
     const lostDeals = deals.filter(
       (deal) => deal.stage_column_id === stage.stage_column_id && deal.outcome === 'lost'
@@ -119,31 +133,77 @@ function buildLostByStage(deals: MockDeal[], stages: FunnelStageData[], metricMo
   });
 }
 
+function findFirstOutcomeColumn(
+  activeColumns: ActiveFunnelColumn[],
+  boardId: number,
+  role: DealOutcome,
+): ActiveFunnelColumn | undefined {
+  const targetRole = role === 'won' ? 'won' : 'lost';
+  return activeColumns.find(
+    (column) => column.board_id === boardId && column.role === targetRole,
+  );
+}
+
+function reassignDealsToActiveColumns(
+  deals: MockDeal[],
+  activeColumns: ActiveFunnelColumn[],
+): ReassignedDeal[] {
+  if (activeColumns.length === 0) return [];
+
+  const activeColumnIds = new Set(activeColumns.map((column) => column.column_id));
+
+  return deals.flatMap((deal) => {
+    let assignedColumnId: number | null = null;
+
+    if (deal.outcome === 'in_progress') {
+      assignedColumnId = activeColumnIds.has(deal.stage_column_id)
+        ? deal.stage_column_id
+        : null;
+    } else {
+      const outcomeColumn = findFirstOutcomeColumn(activeColumns, deal.board_id, deal.outcome);
+      assignedColumnId = outcomeColumn?.column_id ?? null;
+    }
+
+    if (assignedColumnId == null) return [];
+
+    return [{ ...deal, stage_column_id: assignedColumnId }];
+  });
+}
+
 export function getFunnelData(
   filters: FunnelFilters,
   metricMode: MetricMode,
   boardIds?: number[],
+  customStages?: FunnelStageData[],
+  customDeals?: MockDeal[],
+  activeColumns?: ActiveFunnelColumn[],
 ): FunnelReportData {
-  let deals: MockDeal[] = [...mockDeals];
+  const sourceDeals = customDeals ?? mockDeals;
+  let deals: MockDeal[] = [...sourceDeals];
 
   // Filter by board
   if (boardIds && boardIds.length > 0) {
     deals = deals.filter((d) => boardIds.includes(d.board_id));
   }
 
-  // Filter by owner
-  if (filters.owner_ids.length > 0) {
-    deals = deals.filter(
-      (d) => d.responsible && filters.owner_ids.includes(d.responsible.id)
-    );
+  // Filter by card type/source
+  if (filters.card_type) {
+    deals = deals.filter((d) => d.source === filters.card_type);
   }
 
-  const stages = buildStageMetrics(deals, metricMode);
+  const resolvedActiveColumns = activeColumns ?? [];
+  const resolvedStages = resolvedActiveColumns.length > 0
+    ? buildStageTemplatesFromColumns(resolvedActiveColumns)
+    : (customStages ?? mockStages);
+  const reassignedDeals = resolvedActiveColumns.length > 0
+    ? reassignDealsToActiveColumns(deals, resolvedActiveColumns)
+    : deals;
+  const stages = buildStageMetrics(reassignedDeals, metricMode, resolvedStages, resolvedActiveColumns);
 
   const totalEntered = stages[0]?.deals_entered ?? 0;
-  const totalWon = deals.filter((deal) => deal.outcome === 'won').length;
-  const totalLost = deals.filter((deal) => deal.outcome === 'lost').length;
-  const totalInProgress = deals.filter((deal) => deal.outcome === 'in_progress').length;
+  const totalWon = reassignedDeals.filter((deal) => deal.outcome === 'won').length;
+  const totalLost = reassignedDeals.filter((deal) => deal.outcome === 'lost').length;
+  const totalInProgress = reassignedDeals.filter((deal) => deal.outcome === 'in_progress').length;
 
   const overallConversion = totalEntered > 0 ? totalWon / totalEntered : null;
 
@@ -154,10 +214,10 @@ export function getFunnelData(
   let weightedPipelineValue: number | null = null;
   let velocityPerDay: number | null = null;
 
-  const activeDeals = deals.filter((deal) => deal.outcome === 'in_progress');
+  const activeDeals = reassignedDeals.filter((deal) => deal.outcome === 'in_progress');
 
   if (metricMode === 'amount') {
-    const wonWithAmount = deals.filter((deal) => deal.outcome === 'won' && deal.deal_amount != null);
+    const wonWithAmount = reassignedDeals.filter((deal) => deal.outcome === 'won' && deal.deal_amount != null);
     avgWonDealSize = wonWithAmount.length > 0
       ? wonWithAmount.reduce((sum, deal) => sum + (deal.deal_amount ?? 0), 0) / wonWithAmount.length
       : null;
@@ -169,8 +229,9 @@ export function getFunnelData(
     pipelineDealsWithoutAmount = activeDeals.filter((deal) => deal.deal_amount == null).length;
 
     const totalStages = stages.length;
+    const localSortOrder = new Map(resolvedStages.map((s) => [s.stage_column_id, s.stage_sort_order]));
     const wpv = activeDealsWithAmount.reduce((sum, deal) => {
-      const sortOrder = getStageSortOrder(deal.stage_column_id);
+      const sortOrder = localSortOrder.get(deal.stage_column_id) ?? null;
       if (sortOrder == null) return sum;
       const probability = sortOrder / totalStages;
       return sum + (deal.deal_amount ?? 0) * probability;
@@ -178,7 +239,7 @@ export function getFunnelData(
     weightedPipelineValue = activeDealsWithAmount.length > 0 ? Math.round(wpv) : null;
   }
 
-  const wonCycleSamples = deals
+  const wonCycleSamples = reassignedDeals
     .filter((deal) => deal.outcome === 'won')
     .map((deal) => deal.duration_days);
   const avgSalesCycleDays = average(wonCycleSamples);
@@ -210,9 +271,9 @@ export function getFunnelData(
       weighted_pipeline_value: weightedPipelineValue,
       velocity_per_day: velocityPerDay,
       avg_won_deal_size: avgWonDealSize,
-      lost_by_stage: buildLostByStage(deals, stages, metricMode),
+      lost_by_stage: buildLostByStage(reassignedDeals, stages, metricMode),
     },
-    deals,
+    deals: reassignedDeals,
   };
 }
 
@@ -221,6 +282,6 @@ export function getDealsByStage(
   allDeals: FunnelDealItem[]
 ): FunnelDealItem[] {
   return allDeals.filter(
-    (d) => (d as FunnelDealItem & { stage_column_id: number }).stage_column_id === stageColumnId
+    (deal) => deal.stage_column_id === stageColumnId
   );
 }

@@ -5,36 +5,26 @@ import Typography from '@mui/material/Typography';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
-import Autocomplete from '@mui/material/Autocomplete';
-import Checkbox from '@mui/material/Checkbox';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import type { FunnelFilters, PeriodPreset, Manager } from '@/lib/types';
+import type { FunnelFilters, PeriodPreset } from '@/lib/types';
 import { PERIOD_PRESETS } from '@/lib/constants';
 
 interface FiltersSidebarProps {
   filters: FunnelFilters;
-  managers: Manager[];
+  cardTypes: string[];
   onPeriodChange: (period: PeriodPreset) => void;
-  onDateFromChange: (date: string) => void;
-  onDateToChange: (date: string) => void;
-  onOwnerIdsChange: (ids: number[]) => void;
+  onCardTypeChange: (cardType: string) => void;
   onApply: () => void;
 }
 
 export function FiltersSidebar({
   filters,
-  managers,
+  cardTypes,
   onPeriodChange,
-  onDateFromChange,
-  onDateToChange,
-  onOwnerIdsChange,
+  onCardTypeChange,
   onApply,
 }: FiltersSidebarProps) {
-  const selectedManagers = managers.filter((m) => filters.owner_ids.includes(m.id));
-
   return (
     <Box
       sx={{
@@ -66,7 +56,7 @@ export function FiltersSidebar({
       </Box>
 
       {/* Filters body */}
-      <Box sx={{ flex: 1, px: 2, py: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Box sx={{ px: 2, py: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
         {/* Period */}
         <Box>
           <Typography
@@ -97,7 +87,7 @@ export function FiltersSidebar({
           </FormControl>
         </Box>
 
-        {/* Date from */}
+        {/* Card types */}
         <Box>
           <Typography
             variant="caption"
@@ -109,97 +99,25 @@ export function FiltersSidebar({
               fontSize: '0.6875rem',
             }}
           >
-            Дата начала
+            Типы карточек
           </Typography>
-          <TextField
-            id="filter-date-from"
-            name="date_from"
-            type="date"
-            value={filters.date_from}
-            onChange={(e) => onDateFromChange(e.target.value)}
-            fullWidth
-            size="small"
-            InputProps={{
-              sx: { fontSize: '0.8125rem' },
-            }}
-          />
+          <FormControl fullWidth size="small">
+            <Select
+              value={filters.card_type}
+              onChange={(e) => onCardTypeChange(String(e.target.value))}
+              displayEmpty
+              sx={{ fontSize: '0.8125rem' }}
+            >
+              <MenuItem value="">Все</MenuItem>
+              {cardTypes.map((cardType) => (
+                <MenuItem key={cardType} value={cardType}>
+                  {cardType}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
 
-        {/* Date to */}
-        <Box>
-          <Typography
-            variant="caption"
-            sx={{
-              display: 'block',
-              mb: 0.75,
-              color: 'text.secondary',
-              fontWeight: 600,
-              fontSize: '0.6875rem',
-            }}
-          >
-            Дата окончания
-          </Typography>
-          <TextField
-            id="filter-date-to"
-            name="date_to"
-            type="date"
-            value={filters.date_to}
-            onChange={(e) => onDateToChange(e.target.value)}
-            fullWidth
-            size="small"
-            InputProps={{
-              sx: { fontSize: '0.8125rem' },
-            }}
-          />
-        </Box>
-
-        <Divider sx={{ opacity: 0.4, my: 0.5 }} />
-
-        {/* Responsible (Owner) filter */}
-        <Box>
-          <Typography
-            variant="caption"
-            sx={{
-              display: 'block',
-              mb: 0.75,
-              color: 'text.secondary',
-              fontWeight: 600,
-              fontSize: '0.6875rem',
-            }}
-          >
-            Ответственный
-          </Typography>
-          <Autocomplete
-            multiple
-            size="small"
-            options={managers}
-            value={selectedManagers}
-            getOptionLabel={(option) => option.full_name}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            onChange={(_e, newValue) => {
-              onOwnerIdsChange(newValue.map((m) => m.id));
-            }}
-            disableCloseOnSelect
-            renderOption={(props, option, { selected }) => (
-              <li {...props} key={option.id}>
-                <Checkbox size="small" checked={selected} sx={{ mr: 0.5, p: 0.25 }} />
-                <Typography variant="body2">{option.full_name}</Typography>
-              </li>
-            )}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                placeholder={selectedManagers.length === 0 ? 'Все' : undefined}
-                sx={{ '& .MuiInputBase-root': { fontSize: '0.8125rem' } }}
-              />
-            )}
-            noOptionsText="Не найдено"
-          />
-        </Box>
-      </Box>
-
-      {/* Apply button */}
-      <Box sx={{ px: 2, pb: 2.5, pt: 1 }}>
         <Button
           variant="outlined"
           fullWidth

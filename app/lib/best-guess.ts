@@ -2,7 +2,6 @@ import type {
   SpaceBoard,
   SpaceColumn,
   AutoStage,
-  AutoFunnelConfig,
   BestGuessAlert,
   BestGuessResult,
   BestGuessConfidence,
@@ -11,6 +10,9 @@ import type {
 import { ALERT_CODES } from './constants';
 
 // ── Alert catalog ──────────────────────────────────────────────
+
+const KAITEN_SUM_FIELD_ARTICLE_URL =
+  'https://faq-ru.kaiten.site/99d5507a-4522-4641-927b-4d99954be51e';
 
 const ALERT_CATALOG: Record<string, Omit<BestGuessAlert, 'code'>> = {
   [ALERT_CODES.NO_BOARDS]: {
@@ -44,7 +46,7 @@ const ALERT_CATALOG: Record<string, Omit<BestGuessAlert, 'code'>> = {
   [ALERT_CODES.MULTIPLE_DONE_COLUMNS]: {
     type: 'warning',
     message:
-      'Найдено несколько завершающих колонок. Последняя определена как «Выигран», остальные — как «Проигран». Проверьте, правильно ли это для вашего процесса.',
+      'Найдено несколько завершающих колонок. Система автоматически выбрала «Успешный результат», остальные определены как «Проигран». Проверьте, правильно ли это для вашего процесса.',
     action_label: 'Настроить',
     action_target: 'settings',
   },
@@ -52,8 +54,9 @@ const ALERT_CATALOG: Record<string, Omit<BestGuessAlert, 'code'>> = {
     type: 'info',
     message:
       'На досках нет числового поля для суммы сделки. Воронка построена по количеству карточек. Добавьте числовое поле, чтобы видеть суммы.',
-    action_label: 'Настроить',
-    action_target: 'settings',
+    action_label: 'Как добавить сумму',
+    action_target: 'link',
+    action_href: KAITEN_SUM_FIELD_ARTICLE_URL,
   },
   [ALERT_CODES.MULTIPLE_AMOUNT_FIELDS]: {
     type: 'info',
@@ -98,6 +101,24 @@ function normalize(name: string): string {
   return name.trim().toLowerCase();
 }
 
+const WIN_DONE_KEYWORDS = [
+  'оплач',
+  'выигр',
+  'успеш',
+  'won',
+  'paid',
+  'активный клиент',
+];
+
+const LOSS_DONE_KEYWORDS = [
+  'отказ',
+  'проиг',
+  'lost',
+  'cancel',
+  'отмен',
+  'неусп',
+];
+
 function minConfidence(
   a: BestGuessConfidence,
   b: BestGuessConfidence,
@@ -128,6 +149,40 @@ function sortDoneByGlobalPosition(
     if (boa !== bob) return boa - bob;
     return a.sort_order_in_board - b.sort_order_in_board;
   });
+}
+
+function hasKeywordMatch(name: string, keywords: string[]): boolean {
+  const normalized = normalize(name);
+  return keywords.some((keyword) => normalized.includes(keyword));
+}
+
+function pickWonAndLostColumns(
+  doneColumns: DoneColumn[],
+  boards: SpaceBoard[],
+): { winColumnIds: number[]; lossColumnIds: number[] } {
+  const sorted = sortDoneByGlobalPosition(doneColumns, boards);
+  const semanticWin = sorted.find((column) =>
+    hasKeywordMatch(column.name, WIN_DONE_KEYWORDS),
+  );
+  const semanticLossIds = new Set(
+    sorted
+      .filter((column) => hasKeywordMatch(column.name, LOSS_DONE_KEYWORDS))
+      .map((column) => column.id),
+  );
+
+  const wonColumn = semanticWin ?? sorted[0];
+  const remainingColumns = sorted.filter((column) => column.id !== wonColumn.id);
+  const prioritizedLosses = remainingColumns.filter((column) =>
+    semanticLossIds.has(column.id),
+  );
+  const fallbackLosses = remainingColumns.filter(
+    (column) => !semanticLossIds.has(column.id),
+  );
+
+  return {
+    winColumnIds: [wonColumn.id],
+    lossColumnIds: [...prioritizedLosses, ...fallbackLosses].map((column) => column.id),
+  };
 }
 
 // ── Amount field logic ─────────────────────────────────────────
@@ -348,15 +403,14 @@ export function runBestGuess(boards: SpaceBoard[]): BestGuessResult {
     confidence = 'medium';
     alerts.push(createAlert(ALERT_CODES.SINGLE_DONE_COLUMN));
   } else if (doneColumns.length === 2) {
-    const sorted = sortDoneByGlobalPosition(doneColumns, boards);
-    winColumnIds = [sorted[sorted.length - 1].id];
-    lossColumnIds = [sorted[0].id];
+    const resolved = pickWonAndLostColumns(doneColumns, boards);
+    winColumnIds = resolved.winColumnIds;
+    lossColumnIds = resolved.lossColumnIds;
     confidence = 'high';
   } else {
-    // 3+ done columns
-    const sorted = sortDoneByGlobalPosition(doneColumns, boards);
-    winColumnIds = [sorted[sorted.length - 1].id];
-    lossColumnIds = sorted.slice(0, -1).map((d) => d.id);
+    const resolved = pickWonAndLostColumns(doneColumns, boards);
+    winColumnIds = resolved.winColumnIds;
+    lossColumnIds = resolved.lossColumnIds;
     confidence = 'medium';
     alerts.push(createAlert(ALERT_CODES.MULTIPLE_DONE_COLUMNS));
   }

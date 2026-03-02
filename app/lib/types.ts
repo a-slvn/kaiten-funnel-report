@@ -17,7 +17,8 @@ export interface BestGuessAlert {
   code: string;
   message: string;
   action_label: string;
-  action_target: 'settings';
+  action_target: 'settings' | 'link';
+  action_href?: string;
 }
 
 export interface BestGuessResult {
@@ -65,6 +66,7 @@ export interface FunnelStageData {
   stage_sort_order: number;
   board_id: number;
   board_name: string;
+  stage_role?: ColumnRole;
   deals_entered: number;
   total_amount: number | null;
   deals_with_amount: number;
@@ -119,6 +121,8 @@ export interface FunnelDealItem {
   outcome: DealOutcome;
   visit_number: number;
   is_stale: boolean;
+  stage_column_id: number;
+  board_id: number;
 }
 
 export interface FunnelReportData {
@@ -131,7 +135,7 @@ export interface FunnelFilters {
   period: PeriodPreset;
   date_from: string;
   date_to: string;
-  owner_ids: number[];
+  card_type: string;
 }
 
 export type PeriodPreset =

@@ -25,14 +25,28 @@ export function AlertBanner({ alerts, onOpenSettings, onDismiss }: AlertBannerPr
           action={
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               {alert.action_label && (
-                <Button
-                  color="inherit"
-                  size="small"
-                  onClick={onOpenSettings}
-                  sx={{ fontWeight: 500, whiteSpace: 'nowrap' }}
-                >
-                  {alert.action_label}
-                </Button>
+                alert.action_target === 'link' && alert.action_href ? (
+                  <Button
+                    color="inherit"
+                    size="small"
+                    component="a"
+                    href={alert.action_href}
+                    target="_blank"
+                    rel="noreferrer"
+                    sx={{ fontWeight: 500, whiteSpace: 'nowrap' }}
+                  >
+                    {alert.action_label}
+                  </Button>
+                ) : (
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={onOpenSettings}
+                    sx={{ fontWeight: 500, whiteSpace: 'nowrap' }}
+                  >
+                    {alert.action_label}
+                  </Button>
+                )
               )}
               {onDismiss && (
                 <IconButton

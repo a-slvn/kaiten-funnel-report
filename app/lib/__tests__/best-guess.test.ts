@@ -59,8 +59,8 @@ describe('runBestGuess', () => {
         columns: [
           { id: 10, name: 'Лид', column_type: 'queue' },
           { id: 11, name: 'Встреча', column_type: 'in_progress' },
-          { id: 12, name: 'Проигран', column_type: 'done' },
-          { id: 13, name: 'Выигран', column_type: 'done' },
+          { id: 12, name: 'Выигран', column_type: 'done' },
+          { id: 13, name: 'Проигран', column_type: 'done' },
         ],
         custom_fields: [
           { id: 901, name: 'Сумма сделки', field_type: 'number' },
@@ -74,8 +74,8 @@ describe('runBestGuess', () => {
     expect(result.metric_mode).toBe('amount');
     expect(result.config.stages).toHaveLength(2);
     expect(result.config.stages.map((s) => s.label)).toEqual(['Лид', 'Встреча']);
-    expect(result.config.win_column_ids).toEqual([13]);
-    expect(result.config.loss_column_ids).toEqual([12]);
+    expect(result.config.win_column_ids).toEqual([12]); // first done = won
+    expect(result.config.loss_column_ids).toEqual([13]); // after won = lost
     expect(result.config.deal_amount_field_id).toBe(901);
     expect(result.alerts).toHaveLength(0);
   });
@@ -138,7 +138,7 @@ describe('runBestGuess', () => {
           { id: 10, name: 'Лид', column_type: 'queue' },
           { id: 11, name: 'Отложен', column_type: 'done' },
           { id: 12, name: 'Отказ', column_type: 'done' },
-          { id: 13, name: 'Выигран', column_type: 'done' },
+          { id: 13, name: 'Оплачено', column_type: 'done' },
         ],
         custom_fields: [
           { id: 901, name: 'Сумма', field_type: 'number' },
@@ -149,8 +149,8 @@ describe('runBestGuess', () => {
     const result = runBestGuess(boards);
 
     expect(result.confidence).toBe('medium');
-    expect(result.config.win_column_ids).toEqual([13]); // last done
-    expect(result.config.loss_column_ids).toEqual([11, 12]); // rest
+    expect(result.config.win_column_ids).toEqual([13]); // semantic paid/won match
+    expect(result.config.loss_column_ids).toEqual([12, 11]);
     expect(result.alerts.map((a) => a.code)).toContain(ALERT_CODES.MULTIPLE_DONE_COLUMNS);
   });
 
@@ -308,10 +308,9 @@ describe('runBestGuess', () => {
       'Новые', 'Квалификация', 'Встреча', 'Предложение', 'Переговоры', 'Onboarding',
     ]);
 
-    // Done columns: 103, 204, 205, 302 → 4 done columns
-    // Won = last done (302 Активный клиент), loss = rest (103, 204, 205)
-    expect(result.config.win_column_ids).toEqual([302]);
-    expect(result.config.loss_column_ids).toEqual([103, 204, 205]);
+    // Done columns: 103, 204, 205, 302 → paid should be detected as successful result
+    expect(result.config.win_column_ids).toEqual([204]);
+    expect(result.config.loss_column_ids).toEqual([205, 103, 302]);
 
     // Confidence: medium (3+ done columns)
     expect(result.confidence).toBe('medium');

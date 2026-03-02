@@ -1,345 +1,242 @@
 # Test Cases
 
-Формат: сценарии для ручного регресса и будущей автоматизации.
+This file is aligned with `qa/test-cases-funnel.md` and the in-app QA Scenario Switcher.
+Rule: one test case validates one main behavior or one main alert.
 
-## TC-01. Первый вход в отчет
+## TC-01. Report opens and chart is built immediately
+
+Priority: Critical
+
+Preconditions:
+
+- scenario `smoke-open-report` is selected
+
+Steps:
+
+1. Open the report.
+2. Wait until loading is finished.
+
+Expected result:
+
+- the report opens directly on the chart;
+- 5 populated funnel stages are visible;
+- KPI cards and employee section are populated.
+
+## TC-02. Count fallback without amount field
+
+Priority: Critical
+
+Preconditions:
+
+- scenario `metric-count-no-amount` is selected
+
+Steps:
+
+1. Open the report.
+2. Inspect the chart, header controls, and alert.
+3. Open `Настроить`.
+
+Expected result:
+
+- the chart is displayed in count mode;
+- no monetary values are shown on the chart;
+- there are no metric toggle buttons in the chart header;
+- there is no amount-field selector in funnel setup;
+- only `NO_AMOUNT_FIELD` alert is shown.
+- the alert contains the help link to the Kaiten FAQ article.
+
+## TC-03. Amount is shown by default when a common amount field exists
+
+Priority: Critical
+
+Preconditions:
+
+- scenario `metric-amount-common-field` is selected
+
+Steps:
+
+1. Open the report.
+2. Inspect the chart and KPI immediately after loading.
+
+Expected result:
+
+- there are no metric toggle buttons in the chart header;
+- the chart is shown by amount immediately;
+- KPI values follow the amount mode by default;
+- chart labels show monetary values.
+
+## TC-04. Alert: different amount fields across boards
 
 Priority: High
 
 Preconditions:
 
-- приложение открыто по маршруту `/reports/funnel`
+- scenario `alert-different-amount-fields` is selected
 
 Steps:
 
-1. Открыть страницу отчета.
-2. Дождаться исчезновения loader.
+1. Open the report.
 
 Expected result:
 
-- отображаются breadcrumb, блок воронки, KPI, блок по сотрудникам и правый сайдбар;
-- если есть Best Guess alerts, они видимы и читаемы;
-- не возникает пустого экрана после загрузки.
+- only `DIFFERENT_AMOUNT_FIELDS` alert is shown;
+- chart still renders;
+- there are no metric toggle buttons in the chart header;
+- the chart falls back to count mode automatically.
 
-Notes:
-
-- базовый smoke для дальнейших сценариев.
-
-## TC-02. Смена пресета периода
+## TC-05. Alert: multiple common amount fields
 
 Priority: High
 
 Preconditions:
 
-- отчет открыт
+- scenario `alert-multiple-common-amount-fields` is selected
 
 Steps:
 
-1. В фильтре `Период` выбрать другой preset, например `Прошлый месяц`.
-2. Дождаться обновления экрана.
+1. Open the report.
 
 Expected result:
 
-- значения `Дата начала` и `Дата окончания` синхронно меняются;
-- отчет явно показывает, что данные пересчитаны именно под выбранный период;
-- пользователь понимает, какой диапазон сейчас применен.
+- only `MULTIPLE_AMOUNT_FIELDS` alert is shown;
+- the chart is rendered by amount using the auto-selected field.
 
-Notes:
-
-- сейчас код указывает на риск ложного пересчета без фактической фильтрации по датам.
-
-## TC-03. Ручной ввод диапазона дат
+## TC-06. Alert: partial amount field coverage
 
 Priority: High
 
 Preconditions:
 
-- отчет открыт
+- scenario `alert-partial-amount-fields` is selected
 
 Steps:
 
-1. Изменить `Дата начала`.
-2. Изменить `Дата окончания`.
-3. Нажать `Показать`.
+1. Open the report.
 
 Expected result:
 
-- оба поля сохраняют введенные значения;
-- отчет пересчитывается по новому диапазону;
-- при невалидном диапазоне пользователь получает понятное сообщение.
+- only `PARTIAL_AMOUNT_FIELDS` alert is shown;
+- the chart falls back to count mode;
+- there are no metric toggle buttons in the chart header.
 
-Notes:
-
-- критичный кейс для проверки ручного фильтра.
-
-## TC-04. Фильтр по ответственному
+## TC-07. Alert: multiple done columns
 
 Priority: High
 
 Preconditions:
 
-- отчет открыт
-- в списке есть несколько менеджеров
+- scenario `alert-multiple-done-columns` is selected
 
 Steps:
 
-1. Выбрать одного ответственного.
-2. Проверить, что выбор отображается в `Autocomplete`.
-3. Нажать `Показать`.
+1. Open the report.
+2. Open funnel setup.
 
 Expected result:
 
-- выбранный менеджер остается видимым в контроле;
-- таблица, график, KPI, drilldown и блок сотрудников используют один и тот же отфильтрованный набор данных.
+- only `MULTIPLE_DONE_COLUMNS` alert is shown;
+- the chart remains populated;
+- all final columns are visible in setup.
 
-Notes:
-
-- кейс нужен и на одного, и на нескольких ответственных.
-
-## TC-05. Комбинированный фильтр: период + ответственный
+## TC-08. Alert: single done column
 
 Priority: High
 
 Preconditions:
 
-- отчет открыт
+- scenario `alert-single-done-column` is selected
 
 Steps:
 
-1. Выбрать preset периода.
-2. Выбрать одного или нескольких ответственных.
-3. Применить фильтр.
+1. Open the report.
 
 Expected result:
 
-- пересчет использует пересечение условий, а не только одно из них;
-- на экране нет конфликта между отображаемыми фильтрами и фактическими цифрами.
+- only `SINGLE_DONE_COLUMN` alert is shown;
+- chart and KPI remain populated.
 
-Notes:
-
-- высокий регрессионный риск из-за нескольких источников состояния.
-
-## TC-06. Открытие и применение диалога "Настроить воронку"
+## TC-09. Alert: no done columns
 
 Priority: High
 
 Preconditions:
 
-- отчет открыт
-- диалог настройки доступен
+- scenario `alert-no-done-columns` is selected
 
 Steps:
 
-1. Нажать `Настроить`.
-2. Выключить один этап.
-3. Изменить роль одной колонки на `Проиграно` или `Успешный результат`.
-4. Нажать `Применить`.
+1. Open the report.
 
 Expected result:
 
-- отчет пересчитывает этапы и итоговые показатели согласно новой конфигурации;
-- пользователь видит, что именно изменилось после применения.
+- only `NO_DONE_COLUMNS` alert is shown;
+- chart still renders with fallback behavior.
 
-Notes:
-
-- сейчас это один из самых рискованных сценариев в продукте.
-
-## TC-07. Смена поля суммы сделки
+## TC-10. Empty period
 
 Priority: High
 
 Preconditions:
 
-- в настройке есть хотя бы одно числовое поле
+- scenario `empty-period` is selected
 
 Steps:
 
-1. Открыть `Настроить`.
-2. Выбрать другое поле суммы.
-3. Нажать `Применить`.
+1. Open the report.
 
 Expected result:
 
-- режим `amount` и денежные показатели пересчитываются от выбранного поля;
-- если поле недоступно не на всех досках, пользователь получает понятное предупреждение.
+- report structure stays visible;
+- values are zero or empty;
+- no fake employees or deals appear.
 
-Notes:
-
-- важно проверить как single-board, так и multi-board сценарий.
-
-## TC-08. Сброс настройки к авто-конфигурации
+## TC-11. No boards
 
 Priority: Medium
 
 Preconditions:
 
-- в диалоге ранее были изменены этапы или поле суммы
+- scenario `no-boards` is selected
 
 Steps:
 
-1. Нажать `Сбросить к автоматическим`.
-2. Нажать `Применить`.
+1. Open the report.
 
 Expected result:
 
-- конфигурация совпадает с текущим Best Guess;
-- отчет возвращается к исходным значениям;
-- пользователю ясно, что ручные правки отменены.
+- only `NO_BOARDS` alert is shown;
+- UI stays stable and understandable.
 
-## TC-09. Переключение между count и amount
+## TC-12. All columns are done
 
 Priority: Medium
 
 Preconditions:
 
-- отчет открыт
-- amount mode доступен
+- scenario `all-cols-done` is selected
 
 Steps:
 
-1. Переключить метрику на `Сумма`.
-2. Проверить chart, table, KPI и drilldown.
-3. Вернуться в `Количество`.
+1. Open the report.
 
 Expected result:
 
-- все виджеты переключаются согласованно;
-- подписи, значения и вторичные бейджи не противоречат друг другу;
-- при отсутствии суммы показывается понятный fallback.
+- only `ALL_COLUMNS_DONE` alert is shown;
+- no fake working stages are rendered.
 
-## TC-10. Паритет chart/table
+## TC-13. One non-done column only
 
 Priority: Medium
 
 Preconditions:
 
-- отчет открыт
+- scenario `one-col-non-done` is selected
 
 Steps:
 
-1. Зафиксировать цифры по этапам в chart-view.
-2. Переключиться в table-view.
+1. Open the report.
 
 Expected result:
 
-- по каждому этапу совпадают counts, суммы и конверсии;
-- клик по этапу в обоих режимах открывает одинаковый detail-view.
-
-## TC-11. Drilldown соответствует этапу
-
-Priority: High
-
-Preconditions:
-
-- отчет открыт
-
-Steps:
-
-1. Кликнуть по этапу в chart или table.
-2. Сравнить число сделок и сумму в заголовке drawer с исходной цифрой на этапе.
-3. Просмотреть список внутри drawer.
-
-Expected result:
-
-- detail-view объясняет именно ту цифру, по которой пользователь кликнул;
-- нет расхождения между total в заголовке и реально показанным списком.
-
-Notes:
-
-- ключевая аналитическая проверка доверия к данным.
-
-## TC-12. Сортировка и пагинация внутри drilldown
-
-Priority: Medium
-
-Preconditions:
-
-- открыт drawer этапа с количеством записей больше одной страницы
-
-Steps:
-
-1. Отсортировать по дате.
-2. Отсортировать по сумме.
-3. Перейти на следующую страницу.
-
-Expected result:
-
-- сортировка стабильна и применяется ко всему набору, а не только к текущей странице;
-- пагинация не сбрасывает drawer и не ломает порядок.
-
-## TC-13. Dismiss alert и повторный вход
-
-Priority: Medium
-
-Preconditions:
-
-- на экране есть alert от Best Guess
-
-Steps:
-
-1. Скрыть alert.
-2. Не перезагружая страницу, выполнить действия на экране.
-3. Обновить страницу.
-
-Expected result:
-
-- в рамках текущей сессии alert остается скрытым;
-- после полной перезагрузки поведение соответствует продуктовой договоренности: либо alert возвращается, либо состояние хранится явно.
-
-## TC-14. Пустой или нулевой результат после фильтра
-
-Priority: Medium
-
-Preconditions:
-
-- есть возможность получить пустой набор данных
-
-Steps:
-
-1. Применить фильтр, который не возвращает сделок.
-
-Expected result:
-
-- экран показывает понятный no-data state;
-- нет misleading нулевых графиков без объяснения;
-- пользователь понимает, как восстановить данные.
-
-## TC-15. Узкий экран и мобильный сценарий
-
-Priority: Medium
-
-Preconditions:
-
-- открыть страницу на ширине 1440px, 1024px, 768px и 390px
-
-Steps:
-
-1. Проверить layout экрана и фильтров.
-2. Открыть drawer drilldown.
-3. Открыть диалог настройки.
-
-Expected result:
-
-- контент не уходит за экран;
-- сайдбар, drawer и chart остаются пригодны к использованию;
-- критичные действия доступны без горизонтального скролла.
-
-## TC-16. Базовая accessibility-проверка
-
-Priority: Medium
-
-Preconditions:
-
-- отчет открыт
-
-Steps:
-
-1. Пройти по странице только клавиатурой.
-2. Проверить фокус на фильтрах, кнопках, drawer и dialog.
-3. Проверить читаемость alert и интерактивных контролов.
-
-Expected result:
-
-- все критичные действия доступны с клавиатуры;
-- у интерактивных элементов есть видимый фокус;
-- смысл статусов не передается только цветом.
+- only `NO_DONE_COLUMNS` alert is shown;
+- the page remains stable with incomplete board structure.

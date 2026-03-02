@@ -35,11 +35,11 @@ function getInitials(name: string): string {
 }
 
 const AVATAR_COLORS = [
-  '#5c6bc0',
-  '#42a5f5',
-  '#26a69a',
-  '#66bb6a',
-  '#ab47bc',
+  '#d8d2ce',
+  '#d7dee8',
+  '#d6e4de',
+  '#e1d7ea',
+  '#e8ddd4',
 ];
 
 function getAvatarColor(id: number): string {
@@ -55,6 +55,10 @@ function ManagerRow({ manager, metricMode }: ManagerRowProps) {
   const [expanded, setExpanded] = useState(false);
   const initials = getInitials(manager.full_name);
   const avatarColor = getAvatarColor(manager.id);
+  const closedDeals = useMemo(
+    () => manager.deals.filter((deal) => deal.outcome === 'won' || deal.outcome === 'lost'),
+    [manager.deals],
+  );
 
   return (
     <Box>
@@ -63,17 +67,19 @@ function ManagerRow({ manager, metricMode }: ManagerRowProps) {
         sx={{
           display: 'flex',
           alignItems: 'center',
-          gap: 2,
-          py: 1.5,
+          gap: 2.5,
+          py: 2.5,
           px: 0,
+          flexWrap: 'wrap',
         }}
       >
         <Avatar
           sx={{
-            width: 36,
-            height: 36,
+            width: 56,
+            height: 56,
             bgcolor: avatarColor,
-            fontSize: '0.8125rem',
+            color: '#2f2a27',
+            fontSize: '1rem',
             fontWeight: 700,
             flexShrink: 0,
           }}
@@ -81,49 +87,66 @@ function ManagerRow({ manager, metricMode }: ManagerRowProps) {
           {initials}
         </Avatar>
 
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.25 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontWeight: 500, fontSize: '1rem', lineHeight: 1.25 }}>
             {manager.full_name}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            сделок: {manager.total}&nbsp;&nbsp;
-            оплачено: {manager.won}&nbsp;&nbsp;
-            потеряно: {manager.lost}
           </Typography>
         </Box>
 
         <Box
-          component="button"
-          onClick={() => setExpanded(!expanded)}
           sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 0.5,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: 'text.secondary',
-            fontSize: '0.75rem',
-            fontWeight: 500,
-            p: 0,
-            '&:hover': { color: 'text.primary' },
+            gap: { xs: 2, md: 5 },
+            flexWrap: 'wrap',
+            color: '#444',
           }}
         >
-          Подробнее:
-          {expanded ? (
-            <ExpandLessIcon sx={{ fontSize: 16 }} />
-          ) : (
-            <ExpandMoreIcon sx={{ fontSize: 16 }} />
-          )}
+          <Typography sx={{ fontSize: '0.9375rem' }}>
+            сделок: <Box component="span" sx={{ fontWeight: 700 }}>{manager.total}</Box>
+          </Typography>
+          <Typography sx={{ fontSize: '0.9375rem' }}>
+            оплачено: <Box component="span" sx={{ fontWeight: 700 }}>{manager.won}</Box>
+          </Typography>
+          <Typography sx={{ fontSize: '0.9375rem' }}>
+            потеряно: <Box component="span" sx={{ fontWeight: 700 }}>{manager.lost}</Box>
+          </Typography>
         </Box>
+
+        {closedDeals.length > 0 && (
+          <Box
+            component="button"
+            onClick={() => setExpanded(!expanded)}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#444',
+              fontSize: '0.9375rem',
+              fontWeight: 400,
+              p: 0,
+              ml: 'auto',
+              '&:hover': { color: '#1f1f1f' },
+            }}
+          >
+            Подробнее:
+            {expanded ? (
+              <ExpandLessIcon sx={{ fontSize: 18 }} />
+            ) : (
+              <ExpandMoreIcon sx={{ fontSize: 18 }} />
+            )}
+          </Box>
+        )}
       </Box>
 
       {/* Expanded deal list */}
-      <Collapse in={expanded}>
-        <Box sx={{ pl: 7, pb: 1.5, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-          {manager.deals.map((deal) => {
+      <Collapse in={expanded && closedDeals.length > 0}>
+        <Box sx={{ pb: 1 }}>
+          {closedDeals.map((deal) => {
             const isWon = deal.outcome === 'won';
-            const isLost = deal.outcome === 'lost';
             return (
               <Box
                 key={`${deal.card_id}-${deal.entered_at}`}
@@ -132,18 +155,21 @@ function ManagerRow({ manager, metricMode }: ManagerRowProps) {
                   alignItems: 'center',
                   gap: 1.5,
                   minWidth: 0,
+                  py: 2,
+                  pl: { xs: 0, md: 6.5 },
+                  borderTop: '1px solid rgba(0,0,0,0.08)',
+                  flexWrap: 'wrap',
                 }}
               >
                 <Typography
-                  variant="body2"
                   sx={{
-                    flex: 1,
+                    flex: '1 1 240px',
                     minWidth: 0,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
-                    color: 'text.primary',
-                    fontSize: '0.8125rem',
+                    color: '#444',
+                    fontSize: '0.9375rem',
                   }}
                 >
                   {deal.card_title}
@@ -152,34 +178,38 @@ function ManagerRow({ manager, metricMode }: ManagerRowProps) {
                 {metricMode === 'amount' && deal.deal_amount != null && (
                   <Chip
                     label={formatCurrencyShort(deal.deal_amount)}
-                    size="small"
                     sx={{
-                      bgcolor: '#ede7f6',
-                      color: '#4527a0',
+                      bgcolor: '#b06ccc',
+                      color: '#fff',
                       fontWeight: 600,
-                      fontSize: '0.6875rem',
-                      height: 20,
+                      fontSize: '0.8125rem',
+                      height: 40,
                       borderRadius: '10px',
                       flexShrink: 0,
+                      '& .MuiChip-label': {
+                        px: 2,
+                      },
                     }}
                   />
                 )}
 
-                {(isWon || isLost) && (
-                  <Chip
-                    label={isWon ? 'оплачено' : 'потеряно'}
-                    size="small"
-                    sx={{
-                      bgcolor: isWon ? '#e8f5e9' : '#fce4ec',
-                      color: isWon ? '#2e7d32' : '#c62828',
-                      fontWeight: 600,
-                      fontSize: '0.6875rem',
-                      height: 20,
-                      borderRadius: '10px',
-                      flexShrink: 0,
-                    }}
-                  />
-                )}
+                <Chip
+                  label={isWon ? 'оплачено' : 'потеряно'}
+                  sx={{
+                    ml: 'auto',
+                    bgcolor: isWon ? '#68b357' : '#e4573d',
+                    color: '#fff',
+                    fontWeight: 600,
+                    fontSize: '0.8125rem',
+                    height: 40,
+                    borderRadius: '999px',
+                    flexShrink: 0,
+                    textTransform: 'lowercase',
+                    '& .MuiChip-label': {
+                      px: 2,
+                    },
+                  }}
+                />
               </Box>
             );
           })}
@@ -216,32 +246,9 @@ export function EmployeeSection({ deals, metricMode }: EmployeeSectionProps) {
 
   return (
     <Box>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          mb: 1,
-        }}
-      >
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.9375rem' }}>
-          По сотрудникам
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 3 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ minWidth: 60, textAlign: 'right' }}>
-            сделок
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ minWidth: 60, textAlign: 'right' }}>
-            оплачено
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ minWidth: 60, textAlign: 'right' }}>
-            потеряно
-          </Typography>
-          <Box sx={{ minWidth: 80 }} />
-        </Box>
-      </Box>
-
-      <Divider sx={{ opacity: 0.5 }} />
+      <Typography sx={{ fontWeight: 500, fontSize: '1.875rem', lineHeight: 1.15, mb: 2.5 }}>
+        По сотрудникам
+      </Typography>
 
       {managers.map((manager) => (
         <ManagerRow key={manager.id} manager={manager} metricMode={metricMode} />

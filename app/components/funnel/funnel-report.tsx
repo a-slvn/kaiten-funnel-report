@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
@@ -10,54 +10,62 @@ import TuneIcon from '@mui/icons-material/Tune';
 
 import { KpiCards } from './kpi-cards';
 import { FunnelChart } from './funnel-chart';
-import { FunnelTable } from './funnel-table';
 import { FiltersSidebar } from './filters-sidebar';
-import { ViewSwitcher } from './view-switcher';
 import { StageDrilldown } from './stage-drilldown';
 import { EmployeeSection } from './employee-section';
 import { AlertBanner } from './alert-banner';
-import { MetricModeToggle } from './metric-mode-toggle';
 import { FunnelSetupDialog } from './funnel-setup-dialog';
 
 import { useFilters } from '@/lib/hooks/use-filters';
 import { useFunnelData } from '@/lib/hooks/use-funnel-data';
 import { useBestGuess } from '@/lib/hooks/use-best-guess';
 import { useDrilldown } from '@/lib/hooks/use-drilldown';
-import { mockSpaceBoards } from '@/data/mock-boards';
-import { mockManagers } from '@/data/mock-managers';
-import type { ViewMode, PeriodPreset, MetricMode, FunnelOverrides } from '@/lib/types';
+import { useScenario } from '@/lib/scenario-context';
+import { buildActiveFunnelColumns, buildColumnOverridesFromBestGuess } from '@/lib/funnel-columns';
+import { ScenarioSwitcher } from './scenario-switcher';
+import type { PeriodPreset, FunnelOverrides } from '@/lib/types';
+
+const STAGE_DRILLDOWN_ENABLED = false;
 
 export function FunnelReport() {
-  const [viewMode, setViewMode] = useState<ViewMode>('chart');
+  const { scenario } = useScenario();
+
+  return <ScenarioFunnelReport key={scenario.id} scenario={scenario} />;
+}
+
+function ScenarioFunnelReport({ scenario }: { scenario: ReturnType<typeof useScenario>['scenario'] }) {
+  const bestGuess = useBestGuess(scenario.boards);
+
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
 
-  const { filters, setPeriod } = useFilters();
-  const [localDateFrom, setLocalDateFrom] = useState(filters.date_from);
-  const [localDateTo, setLocalDateTo] = useState(filters.date_to);
+  const { filters, setPeriod, setCardType } = useFilters();
 
-  // Best Guess auto-configuration
-  const bestGuess = useBestGuess(mockSpaceBoards);
+  // Overrides from setup dialog (persisted in session)
+  const [overrides, setOverrides] = useState<FunnelOverrides | null>(null);
 
-  // Metric mode: initialized from Best Guess, overridable by user
-  const [metricMode, setMetricMode] = useState<MetricMode>('count');
-  const [userOverrodeMetric, setUserOverrodeMetric] = useState(false);
+  // Dismissed alerts (session-only)
+  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (bestGuess.result && !userOverrodeMetric) {
-      setMetricMode(bestGuess.result.metric_mode);
-    }
-  }, [bestGuess.result, userOverrodeMetric]);
+  const metricMode = overrides?.metric_mode ?? bestGuess.result?.metric_mode ?? 'count';
 
-  const handleMetricModeChange = useCallback((mode: MetricMode) => {
-    setMetricMode(mode);
-    setUserOverrodeMetric(true);
-  }, []);
+  const effectiveColumns = useMemo(() => {
+    if (!bestGuess.result) return [];
+    return overrides?.columns ?? buildColumnOverridesFromBestGuess(scenario.boards, bestGuess.result.config);
+  }, [bestGuess.result, overrides?.columns, scenario.boards]);
 
-  // Data fetching with metric mode
+  const activeColumns = useMemo(
+    () => buildActiveFunnelColumns(scenario.boards, effectiveColumns),
+    [scenario.boards, effectiveColumns],
+  );
+
+  // Data fetching with metric mode — uses stages/deals from active scenario
   const { data, isLoading } = useFunnelData(
     filters,
     metricMode,
     bestGuess.result?.config.board_ids,
+    scenario.stages,
+    scenario.deals,
+    activeColumns,
   );
 
   const drilldown = useDrilldown(data?.deals ?? []);
@@ -69,33 +77,26 @@ export function FunnelReport() {
     [setPeriod]
   );
 
-  // Owner filter
-  const [ownerIds, setOwnerIds] = useState<number[]>([]);
-
-  const handleOwnerIdsChange = useCallback((ids: number[]) => {
-    setOwnerIds(ids);
-  }, []);
+  const handleCardTypeChange = useCallback((cardType: string) => {
+    setCardType(cardType);
+  }, [setCardType]);
 
   const handleFilterApply = useCallback(() => {
     // In real app: trigger data fetch with updated filters
   }, []);
 
+  const cardTypes = useMemo(() => {
+    return [...new Set(scenario.deals.map((deal) => deal.source).filter((source): source is string => Boolean(source)))];
+  }, [scenario.deals]);
+
   const handleOpenSetup = useCallback(() => {
     setSetupDialogOpen(true);
   }, []);
 
-  // Overrides from setup dialog (persisted in session)
-  const [overrides, setOverrides] = useState<FunnelOverrides | null>(null);
-
   const handleSetupApply = useCallback((newOverrides: FunnelOverrides) => {
     setOverrides(newOverrides);
-    setMetricMode(newOverrides.metric_mode);
-    setUserOverrodeMetric(true);
     setSetupDialogOpen(false);
   }, []);
-
-  // Dismissed alerts (session-only)
-  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
 
   const handleDismissAlert = useCallback((code: string) => {
     setDismissedAlerts((prev) => new Set(prev).add(code));
@@ -183,21 +184,14 @@ export function FunnelReport() {
             <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.9375rem' }}>
               Конверсия по этапам: Сделки
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <MetricModeToggle
-                value={metricMode}
-                onChange={handleMetricModeChange}
-                amountAvailable={bestGuess.result?.config.deal_amount_field_id != null}
-              />
-              <ViewSwitcher value={viewMode} onChange={setViewMode} />
-            </Box>
           </Box>
 
-          {viewMode === 'chart' ? (
-            <FunnelChart stages={data.stages} onStageClick={drilldown.openDrilldown} metricMode={metricMode} />
-          ) : (
-            <FunnelTable stages={data.stages} onStageClick={drilldown.openDrilldown} metricMode={metricMode} />
-          )}
+          <FunnelChart
+            stages={data.stages}
+            onStageClick={drilldown.openDrilldown}
+            metricMode={metricMode}
+            interactive={STAGE_DRILLDOWN_ENABLED}
+          />
         </Box>
 
         {/* KPI cards */}
@@ -228,11 +222,9 @@ export function FunnelReport() {
       {/* Right filter sidebar */}
       <FiltersSidebar
         filters={filters}
-        managers={mockManagers}
+        cardTypes={cardTypes}
         onPeriodChange={handlePeriodChange}
-        onDateFromChange={setLocalDateFrom}
-        onDateToChange={setLocalDateTo}
-        onOwnerIdsChange={handleOwnerIdsChange}
+        onCardTypeChange={handleCardTypeChange}
         onApply={handleFilterApply}
       />
 
@@ -242,27 +234,32 @@ export function FunnelReport() {
           open={setupDialogOpen}
           onClose={() => setSetupDialogOpen(false)}
           onApply={handleSetupApply}
-          boards={mockSpaceBoards}
+          boards={scenario.boards}
           bestGuessConfig={bestGuess.result.config}
           currentOverrides={overrides}
         />
       )}
 
+      {/* Scenario switcher (QA debug panel) */}
+      <ScenarioSwitcher />
+
       {/* Drilldown drawer */}
-      <StageDrilldown
-        isOpen={drilldown.isOpen}
-        stage={drilldown.stage}
-        deals={drilldown.paginatedDeals}
-        totalDeals={drilldown.deals.length}
-        sortBy={drilldown.sortBy}
-        sortOrder={drilldown.sortOrder}
-        page={drilldown.page}
-        totalPages={drilldown.totalPages}
-        metricMode={metricMode}
-        onClose={drilldown.closeDrilldown}
-        onSort={drilldown.setSort}
-        onPageChange={drilldown.setPage}
-      />
+      {STAGE_DRILLDOWN_ENABLED && (
+        <StageDrilldown
+          isOpen={drilldown.isOpen}
+          stage={drilldown.stage}
+          deals={drilldown.paginatedDeals}
+          totalDeals={drilldown.deals.length}
+          sortBy={drilldown.sortBy}
+          sortOrder={drilldown.sortOrder}
+          page={drilldown.page}
+          totalPages={drilldown.totalPages}
+          metricMode={metricMode}
+          onClose={drilldown.closeDrilldown}
+          onSort={drilldown.setSort}
+          onPageChange={drilldown.setPage}
+        />
+      )}
     </Box>
   );
 }

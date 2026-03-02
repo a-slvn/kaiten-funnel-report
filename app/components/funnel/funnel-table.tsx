@@ -21,9 +21,15 @@ interface FunnelTableProps {
   stages: FunnelStageData[];
   onStageClick: (stage: FunnelStageData) => void;
   metricMode: MetricMode;
+  interactive?: boolean;
 }
 
-export function FunnelTable({ stages, onStageClick, metricMode }: FunnelTableProps) {
+export function FunnelTable({
+  stages,
+  onStageClick,
+  metricMode,
+  interactive = true,
+}: FunnelTableProps) {
   const showAmount = metricMode === 'amount';
 
   return (
@@ -48,9 +54,9 @@ export function FunnelTable({ stages, onStageClick, metricMode }: FunnelTablePro
           {stages.map((stage) => (
             <TableRow
               key={stage.stage_column_id}
-              hover
-              onClick={() => onStageClick(stage)}
-              sx={{ cursor: 'pointer' }}
+              hover={interactive}
+              onClick={interactive ? () => onStageClick(stage) : undefined}
+              sx={{ cursor: interactive ? 'pointer' : 'default' }}
             >
               <TableCell sx={{ fontWeight: 500 }}>
                 <Tooltip title={stage.board_name} placement="right" arrow>

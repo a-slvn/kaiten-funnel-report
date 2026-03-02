@@ -52,7 +52,7 @@ export function useFilters() {
       period: 'this_month',
       date_from: range.from,
       date_to: range.to,
-      owner_ids: [],
+      card_type: '',
     };
   });
 
@@ -66,8 +66,8 @@ export function useFilters() {
     }));
   }, []);
 
-  const setOwnerIds = useCallback((ids: number[]) => {
-    setFilters((prev) => ({ ...prev, owner_ids: ids }));
+  const setCardType = useCallback((cardType: string) => {
+    setFilters((prev) => ({ ...prev, card_type: cardType }));
   }, []);
 
   const resetFilters = useCallback(() => {
@@ -76,9 +76,9 @@ export function useFilters() {
       period: 'this_month',
       date_from: range.from,
       date_to: range.to,
-      owner_ids: [],
+      card_type: '',
     });
   }, []);
 
-  return { filters, setPeriod, setOwnerIds, resetFilters };
+  return { filters, setPeriod, setCardType, resetFilters };
 }

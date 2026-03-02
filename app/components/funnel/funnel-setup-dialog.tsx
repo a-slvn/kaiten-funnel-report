@@ -14,7 +14,6 @@ import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Divider from '@mui/material/Divider';
-import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import type {
   SpaceBoard,
   AutoFunnelConfig,
@@ -22,8 +21,8 @@ import type {
   ColumnOverride,
   ColumnRole,
   CustomFieldDef,
-  MetricMode,
 } from '@/lib/types';
+import { buildColumnOverridesFromBestGuess } from '@/lib/funnel-columns';
 
 interface FunnelSetupDialogProps {
   open: boolean;
@@ -62,40 +61,6 @@ function RoleDot({ color }: { color: string }) {
   );
 }
 
-/** Build initial column overrides from Best Guess config */
-function buildColumnsFromBestGuess(
-  boards: SpaceBoard[],
-  config: AutoFunnelConfig,
-): ColumnOverride[] {
-  const stageColumnIds = new Set(config.stages.map((s) => s.column_id));
-  const winColumnIds = new Set(config.win_column_ids);
-  const lossColumnIds = new Set(config.loss_column_ids);
-
-  const overrides: ColumnOverride[] = [];
-
-  for (const board of boards) {
-    for (const col of board.columns) {
-      let enabled = false;
-      let role: ColumnRole = 'stage';
-
-      if (stageColumnIds.has(col.id)) {
-        enabled = true;
-        role = 'stage';
-      } else if (winColumnIds.has(col.id)) {
-        enabled = true;
-        role = 'won';
-      } else if (lossColumnIds.has(col.id)) {
-        enabled = true;
-        role = 'lost';
-      }
-
-      overrides.push({ column_id: col.id, board_id: board.id, enabled, role });
-    }
-  }
-
-  return overrides;
-}
-
 /** Collect all number fields across boards (deduplicated by name) */
 function collectNumberFields(boards: SpaceBoard[]): CustomFieldDef[] {
   const seen = new Set<string>();
@@ -121,7 +86,7 @@ export function FunnelSetupDialog({
 }: FunnelSetupDialogProps) {
   // Local draft state — initialized from currentOverrides or bestGuessConfig
   const defaultColumns = useMemo(
-    () => buildColumnsFromBestGuess(boards, bestGuessConfig),
+    () => buildColumnOverridesFromBestGuess(boards, bestGuessConfig),
     [boards, bestGuessConfig],
   );
 
@@ -131,9 +96,6 @@ export function FunnelSetupDialog({
   const [amountFieldId, setAmountFieldId] = useState<number | null>(
     currentOverrides?.deal_amount_field_id ?? bestGuessConfig.deal_amount_field_id,
   );
-  const [metricMode, setMetricMode] = useState<MetricMode>(
-    currentOverrides?.metric_mode ?? (bestGuessConfig.deal_amount_field_id != null ? 'amount' : 'count'),
-  );
 
   const numberFields = useMemo(() => collectNumberFields(boards), [boards]);
 
@@ -141,9 +103,6 @@ export function FunnelSetupDialog({
   const handleEnter = useCallback(() => {
     setColumns(currentOverrides?.columns ?? defaultColumns);
     setAmountFieldId(currentOverrides?.deal_amount_field_id ?? bestGuessConfig.deal_amount_field_id);
-    setMetricMode(
-      currentOverrides?.metric_mode ?? (bestGuessConfig.deal_amount_field_id != null ? 'amount' : 'count'),
-    );
   }, [currentOverrides, defaultColumns, bestGuessConfig]);
 
   // Column toggle
@@ -163,20 +122,16 @@ export function FunnelSetupDialog({
   // Amount field change
   const handleAmountFieldChange = useCallback((fieldId: number | null) => {
     setAmountFieldId(fieldId);
-    setMetricMode(fieldId != null ? 'amount' : 'count');
   }, []);
-
-  // Reset to auto
-  const handleReset = useCallback(() => {
-    setColumns(defaultColumns);
-    setAmountFieldId(bestGuessConfig.deal_amount_field_id);
-    setMetricMode(bestGuessConfig.deal_amount_field_id != null ? 'amount' : 'count');
-  }, [defaultColumns, bestGuessConfig]);
 
   // Apply
   const handleApply = useCallback(() => {
-    onApply({ columns, deal_amount_field_id: amountFieldId, metric_mode: metricMode });
-  }, [onApply, columns, amountFieldId, metricMode]);
+    onApply({
+      columns,
+      deal_amount_field_id: amountFieldId,
+      metric_mode: amountFieldId != null ? 'amount' : 'count',
+    });
+  }, [onApply, columns, amountFieldId]);
 
   return (
     <Dialog
@@ -276,54 +231,41 @@ export function FunnelSetupDialog({
           );
         })}
 
-        {/* ── Metric section ──────────────────────────── */}
-        <Divider sx={{ my: 3 }} />
+        {numberFields.length > 0 && (
+          <>
+            {/* ── Metric section ──────────────────────────── */}
+            <Divider sx={{ my: 3 }} />
 
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
-          Метрика
-        </Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
+              Метрика
+            </Typography>
 
-        <FormControl size="small" fullWidth>
-          <InputLabel id="amount-field-label">Поле суммы сделки</InputLabel>
-          <Select
-            labelId="amount-field-label"
-            label="Поле суммы сделки"
-            value={amountFieldId ?? ''}
-            onChange={(e) => {
-              const val = e.target.value as string | number;
-              handleAmountFieldChange(val === '' ? null : Number(val));
-            }}
-            sx={{ fontSize: '0.875rem' }}
-          >
-            <MenuItem value="">
-              <Typography variant="body2" color="text.secondary">
-                Количество сделок (без суммы)
-              </Typography>
-            </MenuItem>
-            {numberFields.map((f) => (
-              <MenuItem key={f.id} value={f.id}>
-                {f.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {/* ── Reset button ────────────────────────────── */}
-        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-start' }}>
-          <Button
-            size="small"
-            startIcon={<RestartAltIcon sx={{ fontSize: 16 }} />}
-            onClick={handleReset}
-            sx={{
-              textTransform: 'none',
-              fontSize: '0.8125rem',
-              color: 'text.secondary',
-              '&:hover': { color: 'text.primary' },
-            }}
-          >
-            Сбросить к автоматическим
-          </Button>
-        </Box>
+            <FormControl size="small" fullWidth>
+              <InputLabel id="amount-field-label">Поле суммы сделки</InputLabel>
+              <Select
+                labelId="amount-field-label"
+                label="Поле суммы сделки"
+                value={amountFieldId ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value as string | number;
+                  handleAmountFieldChange(val === '' ? null : Number(val));
+                }}
+                sx={{ fontSize: '0.875rem' }}
+              >
+                <MenuItem value="">
+                  <Typography variant="body2" color="text.secondary">
+                    Количество сделок (без суммы)
+                  </Typography>
+                </MenuItem>
+                {numberFields.map((f) => (
+                  <MenuItem key={f.id} value={f.id}>
+                    {f.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </>
+        )}
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>

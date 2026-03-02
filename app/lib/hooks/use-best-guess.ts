@@ -30,10 +30,11 @@ export function useBestGuess(boards: SpaceBoard[]) {
     }
   }, []);
 
+  // Re-run when boards change (scenario switch)
   useEffect(() => {
     const timer = run();
     return () => clearTimeout(timer);
-  }, [run]);
+  }, [run, boards]);
 
   const rerun = useCallback(() => {
     run();
