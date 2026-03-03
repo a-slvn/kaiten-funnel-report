@@ -5,6 +5,7 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Box from '@mui/material/Box';
 import CloseIcon from '@mui/icons-material/Close';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import type { BestGuessAlert } from '@/lib/types';
 
 interface AlertBannerProps {
@@ -21,7 +22,7 @@ export function AlertBanner({ alerts, onOpenSettings, onDismiss }: AlertBannerPr
       {alerts.map((alert) => (
         <Alert
           key={alert.code}
-          severity={alert.type === 'warning' ? 'warning' : 'info'}
+          severity="info"
           action={
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               {alert.action_label && (
@@ -33,6 +34,7 @@ export function AlertBanner({ alerts, onOpenSettings, onDismiss }: AlertBannerPr
                     href={alert.action_href}
                     target="_blank"
                     rel="noreferrer"
+                    endIcon={<OpenInNewIcon sx={{ fontSize: '14px !important' }} />}
                     sx={{ fontWeight: 500, whiteSpace: 'nowrap' }}
                   >
                     {alert.action_label}

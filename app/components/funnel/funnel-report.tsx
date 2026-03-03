@@ -153,7 +153,7 @@ function ScenarioFunnelReport({ scenario }: { scenario: ReturnType<typeof useSce
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Breadcrumbs separator="/" sx={{ fontSize: '0.875rem' }}>
             <Typography color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-              Отчёты
+              Отчеты
             </Typography>
             <Typography color="text.primary" sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
               Воронка продаж

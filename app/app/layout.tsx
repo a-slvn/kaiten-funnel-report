@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Отчёт «Воронка продаж» | Kaiten',
-  description: 'Отчёт «Воронка продаж»',
+  title: 'Отчет «Воронка продаж» | Kaiten',
+  description: 'Отчет «Воронка продаж»',
 };
 
 export default function RootLayout({

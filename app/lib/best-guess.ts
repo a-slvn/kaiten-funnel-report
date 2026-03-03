@@ -61,7 +61,7 @@ const ALERT_CATALOG: Record<string, Omit<BestGuessAlert, 'code'>> = {
   [ALERT_CODES.MULTIPLE_AMOUNT_FIELDS]: {
     type: 'info',
     message:
-      'Нашли несколько общих числовых полей. Поэтому воронку считаем по количеству сделок. Настройте на досках одно общее поле суммы, чтобы отчёт мог считать деньги.',
+      'Нашли несколько общих числовых полей. Поэтому воронку считаем по количеству сделок. Настройте на досках одно общее поле суммы, чтобы отчет мог считать деньги.',
     action_label: 'Как настроить сумму',
     action_target: 'link',
     action_href: KAITEN_SUM_FIELD_ARTICLE_URL,
