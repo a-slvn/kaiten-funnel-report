@@ -182,7 +182,7 @@ function ScenarioFunnelReport({ scenario }: { scenario: ReturnType<typeof useSce
         >
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.9375rem' }}>
-              Конверсия по этапам: Сделки
+              Конверсия по этапам
             </Typography>
           </Box>
 

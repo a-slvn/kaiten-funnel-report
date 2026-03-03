@@ -99,7 +99,8 @@ Steps:
 Expected result:
 
 - only `MULTIPLE_AMOUNT_FIELDS` alert is shown;
-- the chart is rendered by amount using the auto-selected field.
+- there are no metric toggle buttons in the chart header;
+- the chart falls back to count mode automatically.
 
 ## TC-06. Alert: partial amount field coverage
 

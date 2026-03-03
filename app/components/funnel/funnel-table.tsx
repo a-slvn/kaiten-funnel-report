@@ -44,10 +44,10 @@ export function FunnelTable({
             <TableCell>Этап</TableCell>
             <TableCell align="right">Сделок</TableCell>
             {showAmount && <TableCell align="right">Сумма</TableCell>}
-            {showAmount && <TableCell align="right">Ср. чек</TableCell>}
+            {showAmount && <TableCell align="right">Средний чек</TableCell>}
             <TableCell align="center">Конверсия</TableCell>
-            <TableCell align="right">Ср. время</TableCell>
-            <TableCell align="right">Зависшие</TableCell>
+            <TableCell align="right">Среднее время</TableCell>
+            <TableCell align="right">Зависшие сделки</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>

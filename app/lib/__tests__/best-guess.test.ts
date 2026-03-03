@@ -80,6 +80,29 @@ describe('runBestGuess', () => {
     expect(result.alerts).toHaveLength(0);
   });
 
+  it('falls back to count for a single board with multiple amount fields', () => {
+    const boards: SpaceBoard[] = [
+      makeBoard({
+        id: 1,
+        columns: [
+          { id: 10, name: 'Лид', column_type: 'queue' },
+          { id: 11, name: 'Выигран', column_type: 'done' },
+        ],
+        custom_fields: [
+          { id: 901, name: 'Сумма сделки', field_type: 'number' },
+          { id: 902, name: 'Бюджет', field_type: 'number' },
+        ],
+      }),
+    ];
+
+    const result = runBestGuess(boards);
+
+    expect(result.metric_mode).toBe('count');
+    expect(result.metric_mode_reason).toBe('ambiguous_amount_fields');
+    expect(result.config.deal_amount_field_id).toBeNull();
+    expect(result.alerts.map((a) => a.code)).toContain(ALERT_CODES.MULTIPLE_AMOUNT_FIELDS);
+  });
+
   // Case 4: 1 board, 0 done → last stage becomes won
   it('uses last stage as won when no done columns exist', () => {
     const boards: SpaceBoard[] = [
@@ -129,8 +152,8 @@ describe('runBestGuess', () => {
     expect(hasAlert(codes, ALERT_CODES.NO_AMOUNT_FIELD)).toBe(true);
   });
 
-  // Case 6: 1 board, 3+ done → MULTIPLE_DONE_COLUMNS
-  it('reports MULTIPLE_DONE_COLUMNS with 3+ done columns', () => {
+  // Case 6: 1 board, 3+ trailing done → only last two stay terminal
+  it('keeps only the two rightmost trailing done columns as outcomes', () => {
     const boards: SpaceBoard[] = [
       makeBoard({
         id: 1,
@@ -149,8 +172,9 @@ describe('runBestGuess', () => {
     const result = runBestGuess(boards);
 
     expect(result.confidence).toBe('medium');
-    expect(result.config.win_column_ids).toEqual([13]); // semantic paid/won match
-    expect(result.config.loss_column_ids).toEqual([12, 11]);
+    expect(result.config.stages.map((stage) => stage.label)).toEqual(['Лид', 'Отложен']);
+    expect(result.config.win_column_ids).toEqual([12]);
+    expect(result.config.loss_column_ids).toEqual([13]);
     expect(result.alerts.map((a) => a.code)).toContain(ALERT_CODES.MULTIPLE_DONE_COLUMNS);
   });
 
@@ -349,7 +373,7 @@ describe('runBestGuess', () => {
   });
 
   // Case 12: Multiple common fields → MULTIPLE_AMOUNT_FIELDS
-  it('picks first common field alphabetically with MULTIPLE_AMOUNT_FIELDS alert', () => {
+  it('falls back to count with MULTIPLE_AMOUNT_FIELDS alert when several common fields exist', () => {
     const boards: SpaceBoard[] = [
       makeBoard({
         id: 1,
@@ -378,10 +402,9 @@ describe('runBestGuess', () => {
 
     const result = runBestGuess(boards);
 
-    expect(result.metric_mode).toBe('amount');
-    expect(result.metric_mode_reason).toBe('first_common_field');
-    // "бюджет" comes before "сумма" alphabetically
-    expect(result.config.deal_amount_field_id).toBe(902); // Бюджет on board 1
+    expect(result.metric_mode).toBe('count');
+    expect(result.metric_mode_reason).toBe('ambiguous_amount_fields');
+    expect(result.config.deal_amount_field_id).toBeNull();
     expect(result.alerts.map((a) => a.code)).toContain(ALERT_CODES.MULTIPLE_AMOUNT_FIELDS);
   });
 });

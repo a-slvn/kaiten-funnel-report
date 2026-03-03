@@ -235,6 +235,7 @@ const MULTIPLE_DONE_STAGES: FunnelStageData[] = [
   stageTemplate(3101, 31, 'Сделки', 'Новые', 1),
   stageTemplate(3102, 31, 'Сделки', 'Квалификация', 2),
   stageTemplate(3103, 31, 'Сделки', 'Переговоры', 3),
+  stageTemplate(3104, 31, 'Сделки', 'Оплачено', 4),
 ];
 
 const MULTIPLE_DONE_DEALS = generateDeals([
@@ -327,14 +328,15 @@ export const scenarios: Scenario[] = [
   {
     id: 'alert-multiple-common-amount-fields',
     name: 'TC-05: несколько общих полей суммы',
-    description: 'Отдельный alert-кейс: общих числовых полей несколько, система выбрала одно автоматически.',
+    description: 'Отдельный alert-кейс: общих числовых полей несколько, поэтому отчёт автоматически переходит на количество сделок.',
     group: 'alerts',
     testCaseRef: 'TC-05',
     precondition: 'На обеих досках есть два одинаковых по названию числовых поля.',
-    action: 'Открыть отчёт и проверить предупреждение по выбору поля суммы.',
+    action: 'Открыть отчёт и проверить предупреждение и fallback по метрике.',
     expectedResult: [
       'Показан только alert "MULTIPLE_AMOUNT_FIELDS".',
-      'График по умолчанию строится по сумме с автоматически выбранным полем.',
+      'В шапке графика нет кнопок переключения метрики, потому что выбор поля суммы неоднозначен.',
+      'График по умолчанию строится по количеству сделок.',
       'Отчёт остаётся заполненным, несмотря на неоднозначность выбора поля.',
     ],
     expectedAlerts: [ALERT_CODES.MULTIPLE_AMOUNT_FIELDS],
@@ -391,7 +393,7 @@ export const scenarios: Scenario[] = [
       'В модалке настройки видны все итоговые колонки для ручной проверки ролей.',
     ],
     expectedAlerts: [ALERT_CODES.MULTIPLE_DONE_COLUMNS],
-    expectedStagesCount: 3,
+    expectedStagesCount: 4,
     boards: cloneBoards(MULTIPLE_DONE_BOARDS),
     stages: cloneStages(MULTIPLE_DONE_STAGES),
     deals: cloneDeals(MULTIPLE_DONE_DEALS),
@@ -518,11 +520,12 @@ export const scenarios: Scenario[] = [
   },
   {
     id: 'all-cols-done',
-    name: 'TC-12: все колонки done',
-    description: 'Технический edge-кейс: рабочие этапы отсутствуют, потому что все колонки финальные.',
+    name: 'TC-12: все колонки финальные',
+    description:
+      'Технический edge-кейс: рабочие этапы отсутствуют, потому что у всех существующих колонок выставлен финальный тип.',
     group: 'edge',
     testCaseRef: 'TC-12',
-    precondition: 'Выбран сценарий, где на доске есть только done-колонки.',
+    precondition: 'Выбран сценарий, где на доске есть только финальные колонки.',
     action: 'Открыть отчёт.',
     expectedResult: [
       'Показан только alert "ALL_COLUMNS_DONE".',

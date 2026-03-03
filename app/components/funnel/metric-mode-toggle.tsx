@@ -25,7 +25,7 @@ export function MetricModeToggle({ value, onChange, amountAvailable }: MetricMod
     >
       <ToggleButton value="count" sx={{ px: 1.5, gap: 0.5, fontSize: '0.8125rem' }}>
         <TagIcon sx={{ fontSize: 16 }} />
-        Кол-во
+        Количество
       </ToggleButton>
       {amountAvailable && (
         <ToggleButton value="amount" sx={{ px: 1.5, gap: 0.5, fontSize: '0.8125rem' }}>

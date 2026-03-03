@@ -64,8 +64,8 @@ function SortableHeader({ field, label, currentSort, currentOrder, onSort, align
 
 const outcomeConfig: Record<string, { label: string; bgcolor: string; color: string }> = {
   in_progress: { label: 'В работе', bgcolor: '#e3f2fd', color: '#1565c0' },
-  won: { label: 'Выигран', bgcolor: '#e8f5e9', color: '#2e7d32' },
-  lost: { label: 'Проигран', bgcolor: '#fce4ec', color: '#c62828' },
+  won: { label: 'Выиграна', bgcolor: '#e8f5e9', color: '#2e7d32' },
+  lost: { label: 'Проиграна', bgcolor: '#fce4ec', color: '#c62828' },
 };
 
 export function DrilldownDealList({ deals, sortBy, sortOrder, onSort, metricMode }: DrilldownDealListProps) {
@@ -87,7 +87,7 @@ export function DrilldownDealList({ deals, sortBy, sortOrder, onSort, metricMode
               <SortableHeader field="deal_amount" label="Сумма" currentSort={sortBy} currentOrder={sortOrder} onSort={onSort} align="right" />
             )}
             <SortableHeader field="entered_at" label="Дата входа" currentSort={sortBy} currentOrder={sortOrder} onSort={onSort} />
-            <SortableHeader field="duration_days" label="Время" currentSort={sortBy} currentOrder={sortOrder} onSort={onSort} align="right" />
+            <SortableHeader field="duration_days" label="Время в этапе" currentSort={sortBy} currentOrder={sortOrder} onSort={onSort} align="right" />
             <TableCell>Статус</TableCell>
           </TableRow>
         </TableHead>
@@ -158,7 +158,7 @@ export function DrilldownDealList({ deals, sortBy, sortOrder, onSort, metricMode
           {deals.length === 0 && (
             <TableRow>
               <TableCell colSpan={colSpan} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                Нет сделок
+                Сделок пока нет
               </TableCell>
             </TableRow>
           )}

@@ -103,13 +103,13 @@ function ManagerRow({ manager, metricMode }: ManagerRowProps) {
           }}
         >
           <Typography sx={{ fontSize: '0.9375rem' }}>
-            сделок: <Box component="span" sx={{ fontWeight: 700 }}>{manager.total}</Box>
+            Сделок: <Box component="span" sx={{ fontWeight: 700 }}>{manager.total}</Box>
           </Typography>
           <Typography sx={{ fontSize: '0.9375rem' }}>
-            оплачено: <Box component="span" sx={{ fontWeight: 700 }}>{manager.won}</Box>
+            Выиграно: <Box component="span" sx={{ fontWeight: 700 }}>{manager.won}</Box>
           </Typography>
           <Typography sx={{ fontSize: '0.9375rem' }}>
-            потеряно: <Box component="span" sx={{ fontWeight: 700 }}>{manager.lost}</Box>
+            Проиграно: <Box component="span" sx={{ fontWeight: 700 }}>{manager.lost}</Box>
           </Typography>
         </Box>
 
@@ -132,7 +132,7 @@ function ManagerRow({ manager, metricMode }: ManagerRowProps) {
               '&:hover': { color: '#1f1f1f' },
             }}
           >
-            Подробнее:
+            {expanded ? 'Скрыть сделки' : 'Показать сделки'}
             {expanded ? (
               <ExpandLessIcon sx={{ fontSize: 18 }} />
             ) : (
@@ -194,7 +194,7 @@ function ManagerRow({ manager, metricMode }: ManagerRowProps) {
                 )}
 
                 <Chip
-                  label={isWon ? 'оплачено' : 'потеряно'}
+                  label={isWon ? 'Выиграно' : 'Проиграно'}
                   sx={{
                     ml: 'auto',
                     bgcolor: isWon ? '#68b357' : '#e4573d',
@@ -204,7 +204,6 @@ function ManagerRow({ manager, metricMode }: ManagerRowProps) {
                     height: 40,
                     borderRadius: '999px',
                     flexShrink: 0,
-                    textTransform: 'lowercase',
                     '& .MuiChip-label': {
                       px: 2,
                     },
@@ -247,7 +246,7 @@ export function EmployeeSection({ deals, metricMode }: EmployeeSectionProps) {
   return (
     <Box>
       <Typography sx={{ fontWeight: 500, fontSize: '1.875rem', lineHeight: 1.15, mb: 2.5 }}>
-        По сотрудникам
+        Сотрудники
       </Typography>
 
       {managers.map((manager) => (

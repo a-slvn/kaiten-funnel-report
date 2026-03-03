@@ -53,7 +53,7 @@ export function AlertBanner({ alerts, onOpenSettings, onDismiss }: AlertBannerPr
                   size="small"
                   color="inherit"
                   onClick={() => onDismiss(alert.code)}
-                  aria-label="Скрыть"
+                  aria-label="Закрыть уведомление"
                 >
                   <CloseIcon fontSize="small" />
                 </IconButton>

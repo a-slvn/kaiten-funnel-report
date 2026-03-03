@@ -5,7 +5,7 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import type { FunnelSummaryData, MetricMode } from '@/lib/types';
-import { formatCurrencyShort, formatDays } from '@/lib/format';
+import { formatCurrencyShort } from '@/lib/format';
 
 interface KpiCardsProps {
   summary: FunnelSummaryData;
@@ -96,26 +96,26 @@ export function KpiCards({ summary, metricMode }: KpiCardsProps) {
         variant="subtitle1"
         sx={{ fontWeight: 600, mb: 1.5, fontSize: '0.9375rem' }}
       >
-        Ключевые результаты
+        Итоги
       </Typography>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <KpiCard
-          label="сделок всего"
+          label="Всего сделок"
           count={summary.total_entered}
           amount={totalAmount}
         />
         <KpiCard
-          label="средняя длительность сделки"
+          label="Средний цикл сделки"
           count={summary.avg_sales_cycle_days != null ? `${summary.avg_sales_cycle_days.toFixed(1)} дн.` : '—'}
         />
         <KpiCard
-          label="оплачено"
+          label="Выиграно"
           count={wonDeals}
           amount={wonAmount}
           accent="green"
         />
         <KpiCard
-          label="потеряно"
+          label="Проиграно"
           count={lostDeals}
           accent="red"
         />

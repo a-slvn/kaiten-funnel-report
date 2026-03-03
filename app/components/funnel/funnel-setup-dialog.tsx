@@ -34,8 +34,8 @@ interface FunnelSetupDialogProps {
 }
 
 const ROLE_OPTIONS: { value: ColumnRole; label: string; color: string }[] = [
-  { value: 'stage', label: 'Этап воронки', color: '#bdbdbd' },
-  { value: 'won', label: 'Успешный результат', color: '#4caf50' },
+  { value: 'stage', label: 'Этап', color: '#bdbdbd' },
+  { value: 'won', label: 'Выиграно', color: '#4caf50' },
   { value: 'lost', label: 'Проиграно', color: '#ef5350' },
 ];
 
@@ -143,12 +143,12 @@ export function FunnelSetupDialog({
       PaperProps={{ sx: { borderRadius: 3, maxHeight: '80vh' } }}
     >
       <DialogTitle sx={{ fontSize: '1.25rem', fontWeight: 700, pb: 0.5, pt: 3, px: 3 }}>
-        Настроить воронку
+        Настройка воронки
       </DialogTitle>
 
       <DialogContent sx={{ px: 3, pt: 1.5 }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.6 }}>
-          Воронка построена автоматически. Вы можете скорректировать этапы и колонки ниже.
+          Мы настроили воронку автоматически. Проверьте этапы, итоговые колонки и поле с суммой.
         </Typography>
 
         {/* ── Boards & columns ────────────────────────── */}
@@ -237,14 +237,14 @@ export function FunnelSetupDialog({
             <Divider sx={{ my: 3 }} />
 
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
-              Метрика
+              Что считаем
             </Typography>
 
             <FormControl size="small" fullWidth>
-              <InputLabel id="amount-field-label">Поле суммы сделки</InputLabel>
+              <InputLabel id="amount-field-label">Поле с суммой</InputLabel>
               <Select
                 labelId="amount-field-label"
-                label="Поле суммы сделки"
+                label="Поле с суммой"
                 value={amountFieldId ?? ''}
                 onChange={(e) => {
                   const val = e.target.value as string | number;
@@ -254,7 +254,7 @@ export function FunnelSetupDialog({
               >
                 <MenuItem value="">
                   <Typography variant="body2" color="text.secondary">
-                    Количество сделок (без суммы)
+                    Считать по количеству сделок
                   </Typography>
                 </MenuItem>
                 {numberFields.map((f) => (
