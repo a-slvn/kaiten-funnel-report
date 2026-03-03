@@ -51,7 +51,7 @@ export function FiltersSidebar({
       >
         <FilterListIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-          Фильтр
+          Фильтры
         </Typography>
       </Box>
 
@@ -99,7 +99,7 @@ export function FiltersSidebar({
               fontSize: '0.6875rem',
             }}
           >
-            Типы карточек
+            Тип карточки
           </Typography>
           <FormControl fullWidth size="small">
             <Select
@@ -108,7 +108,7 @@ export function FiltersSidebar({
               displayEmpty
               sx={{ fontSize: '0.8125rem' }}
             >
-              <MenuItem value="">Все</MenuItem>
+              <MenuItem value="">Все типы</MenuItem>
               {cardTypes.map((cardType) => (
                 <MenuItem key={cardType} value={cardType}>
                   {cardType}
@@ -135,7 +135,7 @@ export function FiltersSidebar({
             },
           }}
         >
-          Показать
+          Применить
         </Button>
       </Box>
     </Box>

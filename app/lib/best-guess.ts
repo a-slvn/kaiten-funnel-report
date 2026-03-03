@@ -18,42 +18,42 @@ const ALERT_CATALOG: Record<string, Omit<BestGuessAlert, 'code'>> = {
   [ALERT_CODES.NO_BOARDS]: {
     type: 'warning',
     message:
-      'На этом пространстве нет досок. Создайте доску, чтобы построить воронку.',
+      'В пространстве пока нет досок. Создайте доску, чтобы построить воронку.',
     action_label: '',
     action_target: 'settings',
   },
   [ALERT_CODES.ALL_COLUMNS_DONE]: {
     type: 'warning',
     message:
-      'Все колонки на досках имеют тип «Готово». Добавьте колонки с другими типами для построения этапов воронки.',
+      'На всех досках колонки помечены как «Готово». Проверьте типы колонок, чтобы построить этапы воронки.',
     action_label: '',
     action_target: 'settings',
   },
   [ALERT_CODES.NO_DONE_COLUMNS]: {
     type: 'warning',
     message:
-      'На досках нет колонок с типом «Готово». Последняя колонка используется как «Выигран». Настройте типы колонок для более точного результата.',
+      'На досках нет колонок с типом «Готово». Поэтому последнюю колонку мы считаем успешным результатом. Добавьте колонки «Готово», чтобы воронка считалась точнее.',
     action_label: 'Настроить',
     action_target: 'settings',
   },
   [ALERT_CODES.SINGLE_DONE_COLUMN]: {
     type: 'info',
     message:
-      'Найдена одна завершающая колонка. Она используется как «Выигран». Если у вас есть отдельная колонка для проигранных сделок, укажите её в настройках.',
+      'Нашли одну финальную колонку. Сейчас считаем её успешным результатом. Если для проигранных сделок есть отдельная колонка, укажите её в настройках.',
     action_label: 'Настроить',
     action_target: 'settings',
   },
   [ALERT_CODES.MULTIPLE_DONE_COLUMNS]: {
     type: 'warning',
     message:
-      'Найдено несколько завершающих колонок. Система автоматически выбрала «Успешный результат», остальные определены как «Проигран». Проверьте, правильно ли это для вашего процесса.',
+      'Нашли несколько финальных колонок. Мы оставили две крайние справа как итоговые, а остальные вернули в этапы воронки. Проверьте, подходит ли это вашему процессу.',
     action_label: 'Настроить',
     action_target: 'settings',
   },
   [ALERT_CODES.NO_AMOUNT_FIELD]: {
     type: 'info',
     message:
-      'На досках нет числового поля для суммы сделки. Воронка построена по количеству карточек. Добавьте числовое поле, чтобы видеть суммы.',
+      'На досках нет числового поля с суммой. Поэтому воронку считаем по количеству сделок. Добавьте поле с суммой, чтобы видеть суммы по этапам.',
     action_label: 'Как добавить сумму',
     action_target: 'link',
     action_href: KAITEN_SUM_FIELD_ARTICLE_URL,
@@ -61,21 +61,21 @@ const ALERT_CATALOG: Record<string, Omit<BestGuessAlert, 'code'>> = {
   [ALERT_CODES.MULTIPLE_AMOUNT_FIELDS]: {
     type: 'info',
     message:
-      'Найдено несколько общих числовых полей. Используется первое по алфавиту. Вы можете выбрать другое поле в настройках.',
+      'Нашли несколько общих числовых полей. Сейчас считаем воронку по количеству сделок, потому что не можем выбрать поле с суммой автоматически. Выберите нужное поле в настройках.',
     action_label: 'Настроить',
     action_target: 'settings',
   },
   [ALERT_CODES.DIFFERENT_AMOUNT_FIELDS]: {
     type: 'warning',
     message:
-      'На разных досках используются разные числовые поля. Воронка построена по количеству карточек, так как суммы несопоставимы. Выберите общее поле в настройках.',
+      'На досках используются разные поля с суммой. Их нельзя сравнить между собой, поэтому сейчас считаем воронку по количеству сделок. Выберите общее поле в настройках.',
     action_label: 'Настроить',
     action_target: 'settings',
   },
   [ALERT_CODES.PARTIAL_AMOUNT_FIELDS]: {
     type: 'warning',
     message:
-      'Не на всех досках есть числовое поле. Воронка построена по количеству карточек. Добавьте одинаковое числовое поле на все доски или выберите поле в настройках.',
+      'Поле с суммой есть не на всех досках. Поэтому сейчас считаем воронку по количеству сделок. Добавьте одинаковое поле на все доски или выберите поле в настройках.',
     action_label: 'Настроить',
     action_target: 'settings',
   },
@@ -134,6 +134,12 @@ interface DoneColumn {
   sort_order_in_board: number;
 }
 
+interface ForcedTrailingOutcomeResolution {
+  stageLikeDoneIds: number[];
+  winColumnIds: number[];
+  lossColumnIds: number[];
+}
+
 /**
  * Sort done-columns by global position:
  * board order first (as given), then column position within board.
@@ -154,6 +160,51 @@ function sortDoneByGlobalPosition(
 function hasKeywordMatch(name: string, keywords: string[]): boolean {
   const normalized = normalize(name);
   return keywords.some((keyword) => normalized.includes(keyword));
+}
+
+function resolveTrailingDoneColumnsAsCrmTail(
+  boards: SpaceBoard[],
+  doneColumns: DoneColumn[],
+): ForcedTrailingOutcomeResolution | null {
+  if (doneColumns.length < 3) {
+    return null;
+  }
+
+  for (let boardIndex = boards.length - 1; boardIndex >= 0; boardIndex -= 1) {
+    const board = boards[boardIndex];
+    const trailingDoneColumns: DoneColumn[] = [];
+
+    for (let columnIndex = board.columns.length - 1; columnIndex >= 0; columnIndex -= 1) {
+      const column = board.columns[columnIndex];
+      if (column.column_type !== 'done') {
+        break;
+      }
+
+      trailingDoneColumns.unshift({
+        id: column.id,
+        board_id: board.id,
+        name: column.name,
+        sort_order_in_board: columnIndex,
+      });
+    }
+
+    if (trailingDoneColumns.length < 3 || trailingDoneColumns.length !== doneColumns.length) {
+      continue;
+    }
+
+    const wonColumn = trailingDoneColumns[trailingDoneColumns.length - 2];
+    const lostColumn = trailingDoneColumns[trailingDoneColumns.length - 1];
+
+    return {
+      stageLikeDoneIds: trailingDoneColumns
+        .slice(0, -2)
+        .map((column) => column.id),
+      winColumnIds: [wonColumn.id],
+      lossColumnIds: [lostColumn.id],
+    };
+  }
+
+  return null;
 }
 
 function pickWonAndLostColumns(
@@ -221,9 +272,9 @@ function determineAmountField(
       };
     }
     return {
-      field_id: fields[0].id,
-      metric_mode: 'amount',
-      reason: fields.length === 1 ? 'single_board_first_field' : 'single_board_first_field',
+      field_id: fields.length === 1 ? fields[0].id : null,
+      metric_mode: fields.length === 1 ? 'amount' : 'count',
+      reason: fields.length === 1 ? 'single_board_first_field' : 'ambiguous_amount_fields',
       confidence: 'high',
       alerts: fields.length > 1
         ? [createAlert(ALERT_CODES.MULTIPLE_AMOUNT_FIELDS)]
@@ -295,17 +346,11 @@ function determineAmountField(
     };
   }
 
-  // Multiple common names — pick first alphabetically
-  const sortedCommon = [...commonNames].sort();
-  const firstName = sortedCommon[0];
-  const firstBoardFields = fieldsByBoard.get(boardsWithFields[0].id) ?? [];
-  const field = firstBoardFields.find(
-    (f) => normalize(f.name) === firstName,
-  );
+  // Multiple common names — fallback to count until user selects one explicitly
   return {
-    field_id: field?.id ?? null,
-    metric_mode: 'amount',
-    reason: 'first_common_field',
+    field_id: null,
+    metric_mode: 'count',
+    reason: 'ambiguous_amount_fields',
     confidence: 'medium',
     alerts: [createAlert(ALERT_CODES.MULTIPLE_AMOUNT_FIELDS)],
   };
@@ -339,9 +384,7 @@ export function runBestGuess(boards: SpaceBoard[]): BestGuessResult {
   const boardIds = boards.map((b) => b.id);
 
   // Step 2 + 3: Collect columns, split into stages and done
-  const stages: AutoStage[] = [];
   const doneColumns: DoneColumn[] = [];
-  let globalSort = 0;
 
   for (const board of boards) {
     for (let colIdx = 0; colIdx < board.columns.length; colIdx++) {
@@ -353,16 +396,28 @@ export function runBestGuess(boards: SpaceBoard[]): BestGuessResult {
           name: col.name,
           sort_order_in_board: colIdx,
         });
-      } else {
-        globalSort += 1;
-        stages.push({
-          column_id: col.id,
-          board_id: board.id,
-          board_name: board.name,
-          label: col.name,
-          sort_order: globalSort,
-        });
       }
+    }
+  }
+
+  const forcedTrailingResolution = resolveTrailingDoneColumnsAsCrmTail(boards, doneColumns);
+  const stageLikeDoneIds = new Set(forcedTrailingResolution?.stageLikeDoneIds ?? []);
+  const stages: AutoStage[] = [];
+  let globalSort = 0;
+
+  for (const board of boards) {
+    for (const col of board.columns) {
+      const isStage = col.column_type !== 'done' || stageLikeDoneIds.has(col.id);
+      if (!isStage) continue;
+
+      globalSort += 1;
+      stages.push({
+        column_id: col.id,
+        board_id: board.id,
+        board_name: board.name,
+        label: col.name,
+        sort_order: globalSort,
+      });
     }
   }
 
@@ -402,6 +457,11 @@ export function runBestGuess(boards: SpaceBoard[]): BestGuessResult {
     lossColumnIds = [];
     confidence = 'medium';
     alerts.push(createAlert(ALERT_CODES.SINGLE_DONE_COLUMN));
+  } else if (forcedTrailingResolution) {
+    winColumnIds = forcedTrailingResolution.winColumnIds;
+    lossColumnIds = forcedTrailingResolution.lossColumnIds;
+    confidence = 'medium';
+    alerts.push(createAlert(ALERT_CODES.MULTIPLE_DONE_COLUMNS));
   } else if (doneColumns.length === 2) {
     const resolved = pickWonAndLostColumns(doneColumns, boards);
     winColumnIds = resolved.winColumnIds;

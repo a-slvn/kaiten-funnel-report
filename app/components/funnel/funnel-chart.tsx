@@ -187,7 +187,7 @@ export function FunnelChart({
           fontSize="12"
           fontWeight="500"
         >
-          {metricMode === 'amount' ? 'Сумма' : 'Кол-во сделок'}
+          {metricMode === 'amount' ? 'Сумма' : 'Количество сделок'}
         </text>
 
         {processStages.map((stage, index) => {

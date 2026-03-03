@@ -1,13 +1,13 @@
 import type { PeriodPreset } from './types';
 
 export const PERIOD_PRESETS: { value: PeriodPreset; label: string }[] = [
-  { value: 'this_week', label: 'Текущая неделя' },
+  { value: 'this_week', label: 'Эта неделя' },
   { value: 'last_week', label: 'Прошлая неделя' },
-  { value: 'this_month', label: 'Текущий месяц' },
+  { value: 'this_month', label: 'Этот месяц' },
   { value: 'last_month', label: 'Прошлый месяц' },
-  { value: 'this_quarter', label: 'Текущий квартал' },
+  { value: 'this_quarter', label: 'Этот квартал' },
   { value: 'last_quarter', label: 'Прошлый квартал' },
-  { value: 'this_year', label: 'Текущий год' },
+  { value: 'this_year', label: 'Этот год' },
 ];
 
 export const CONVERSION_THRESHOLDS = {
@@ -21,7 +21,7 @@ export const STALE_THRESHOLD_DAYS = 14;
 
 export const DEFAULT_SPACE = {
   id: 100,
-  name: 'CRM-пространство',
+  name: 'Пространство CRM',
 };
 
 export const ALERT_CODES = {
