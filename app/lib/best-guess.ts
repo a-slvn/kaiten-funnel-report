@@ -53,31 +53,34 @@ const ALERT_CATALOG: Record<string, Omit<BestGuessAlert, 'code'>> = {
   [ALERT_CODES.NO_AMOUNT_FIELD]: {
     type: 'info',
     message:
-      'На досках нет числового поля с суммой. Поэтому воронку считаем по количеству сделок. Добавьте поле с суммой, чтобы видеть суммы по этапам.',
-    action_label: 'Как добавить сумму',
+      'На досках нет числового поля с суммой. Поэтому воронку считаем по количеству сделок. Настройте поле суммы на досках, чтобы видеть суммы по этапам.',
+    action_label: 'Как настроить сумму',
     action_target: 'link',
     action_href: KAITEN_SUM_FIELD_ARTICLE_URL,
   },
   [ALERT_CODES.MULTIPLE_AMOUNT_FIELDS]: {
     type: 'info',
     message:
-      'Нашли несколько общих числовых полей. Сейчас считаем воронку по количеству сделок, потому что не можем выбрать поле с суммой автоматически. Выберите нужное поле в настройках.',
-    action_label: 'Настроить',
-    action_target: 'settings',
+      'Нашли несколько общих числовых полей. Поэтому воронку считаем по количеству сделок. Настройте на досках одно общее поле суммы, чтобы отчёт мог считать деньги.',
+    action_label: 'Как настроить сумму',
+    action_target: 'link',
+    action_href: KAITEN_SUM_FIELD_ARTICLE_URL,
   },
   [ALERT_CODES.DIFFERENT_AMOUNT_FIELDS]: {
     type: 'warning',
     message:
-      'На досках используются разные поля с суммой. Их нельзя сравнить между собой, поэтому сейчас считаем воронку по количеству сделок. Выберите общее поле в настройках.',
-    action_label: 'Настроить',
-    action_target: 'settings',
+      'На досках используются разные поля с суммой. Их нельзя сравнить между собой, поэтому сейчас считаем воронку по количеству сделок. Настройте на досках одно общее поле суммы.',
+    action_label: 'Как настроить сумму',
+    action_target: 'link',
+    action_href: KAITEN_SUM_FIELD_ARTICLE_URL,
   },
   [ALERT_CODES.PARTIAL_AMOUNT_FIELDS]: {
     type: 'warning',
     message:
-      'Поле с суммой есть не на всех досках. Поэтому сейчас считаем воронку по количеству сделок. Добавьте одинаковое поле на все доски или выберите поле в настройках.',
-    action_label: 'Настроить',
-    action_target: 'settings',
+      'Поле с суммой есть не на всех досках. Поэтому сейчас считаем воронку по количеству сделок. Настройте одинаковое поле суммы на всех досках.',
+    action_label: 'Как настроить сумму',
+    action_target: 'link',
+    action_href: KAITEN_SUM_FIELD_ARTICLE_URL,
   },
 };
 
@@ -346,7 +349,7 @@ function determineAmountField(
     };
   }
 
-  // Multiple common names — fallback to count until user selects one explicitly
+  // Multiple common names — fallback to count until boards are normalized
   return {
     field_id: null,
     metric_mode: 'count',

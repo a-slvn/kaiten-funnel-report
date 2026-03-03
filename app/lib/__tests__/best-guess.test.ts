@@ -19,6 +19,10 @@ function hasAlert(codes: string[], target: string): boolean {
   return codes.includes(target);
 }
 
+function getAlert(result: ReturnType<typeof runBestGuess>, code: string) {
+  return result.alerts.find((alert) => alert.code === code);
+}
+
 // ── Tests ──────────────────────────────────────────────────────
 
 describe('runBestGuess', () => {
@@ -243,7 +247,10 @@ describe('runBestGuess', () => {
 
     expect(result.metric_mode).toBe('count');
     expect(result.config.deal_amount_field_id).toBeNull();
-    expect(result.alerts.map((a) => a.code)).toContain(ALERT_CODES.DIFFERENT_AMOUNT_FIELDS);
+    const alert = getAlert(result, ALERT_CODES.DIFFERENT_AMOUNT_FIELDS);
+    expect(alert).toBeDefined();
+    expect(alert?.action_target).toBe('link');
+    expect(alert?.action_label).toBe('Как настроить сумму');
   });
 
   // Case 9: N boards, partial amount fields → count fallback
@@ -272,7 +279,10 @@ describe('runBestGuess', () => {
     const result = runBestGuess(boards);
 
     expect(result.metric_mode).toBe('count');
-    expect(result.alerts.map((a) => a.code)).toContain(ALERT_CODES.PARTIAL_AMOUNT_FIELDS);
+    const alert = getAlert(result, ALERT_CODES.PARTIAL_AMOUNT_FIELDS);
+    expect(alert).toBeDefined();
+    expect(alert?.action_target).toBe('link');
+    expect(alert?.action_label).toBe('Как настроить сумму');
   });
 
   // Case 10: Full mock data scenario (3 boards from mock-boards)
@@ -369,7 +379,10 @@ describe('runBestGuess', () => {
 
     expect(result.metric_mode).toBe('count');
     expect(result.config.deal_amount_field_id).toBeNull();
-    expect(result.alerts.map((a) => a.code)).toContain(ALERT_CODES.NO_AMOUNT_FIELD);
+    const alert = getAlert(result, ALERT_CODES.NO_AMOUNT_FIELD);
+    expect(alert).toBeDefined();
+    expect(alert?.action_target).toBe('link');
+    expect(alert?.action_label).toBe('Как настроить сумму');
   });
 
   // Case 12: Multiple common fields → MULTIPLE_AMOUNT_FIELDS
@@ -405,6 +418,9 @@ describe('runBestGuess', () => {
     expect(result.metric_mode).toBe('count');
     expect(result.metric_mode_reason).toBe('ambiguous_amount_fields');
     expect(result.config.deal_amount_field_id).toBeNull();
-    expect(result.alerts.map((a) => a.code)).toContain(ALERT_CODES.MULTIPLE_AMOUNT_FIELDS);
+    const alert = getAlert(result, ALERT_CODES.MULTIPLE_AMOUNT_FIELDS);
+    expect(alert).toBeDefined();
+    expect(alert?.action_target).toBe('link');
+    expect(alert?.action_label).toBe('Как настроить сумму');
   });
 });

@@ -12,7 +12,6 @@ import Switch from '@mui/material/Switch';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
 import Divider from '@mui/material/Divider';
 import type {
   SpaceBoard,
@@ -20,7 +19,6 @@ import type {
   FunnelOverrides,
   ColumnOverride,
   ColumnRole,
-  CustomFieldDef,
 } from '@/lib/types';
 import { buildColumnOverridesFromBestGuess } from '@/lib/funnel-columns';
 
@@ -61,21 +59,6 @@ function RoleDot({ color }: { color: string }) {
   );
 }
 
-/** Collect all number fields across boards (deduplicated by name) */
-function collectNumberFields(boards: SpaceBoard[]): CustomFieldDef[] {
-  const seen = new Set<string>();
-  const fields: CustomFieldDef[] = [];
-  for (const board of boards) {
-    for (const f of board.custom_fields ?? []) {
-      if (f.field_type === 'number' && !seen.has(f.name)) {
-        seen.add(f.name);
-        fields.push(f);
-      }
-    }
-  }
-  return fields;
-}
-
 export function FunnelSetupDialog({
   open,
   onClose,
@@ -93,17 +76,11 @@ export function FunnelSetupDialog({
   const [columns, setColumns] = useState<ColumnOverride[]>(
     currentOverrides?.columns ?? defaultColumns,
   );
-  const [amountFieldId, setAmountFieldId] = useState<number | null>(
-    currentOverrides?.deal_amount_field_id ?? bestGuessConfig.deal_amount_field_id,
-  );
-
-  const numberFields = useMemo(() => collectNumberFields(boards), [boards]);
 
   // Re-sync draft when dialog opens with new currentOverrides
   const handleEnter = useCallback(() => {
     setColumns(currentOverrides?.columns ?? defaultColumns);
-    setAmountFieldId(currentOverrides?.deal_amount_field_id ?? bestGuessConfig.deal_amount_field_id);
-  }, [currentOverrides, defaultColumns, bestGuessConfig]);
+  }, [currentOverrides, defaultColumns]);
 
   // Column toggle
   const handleToggleColumn = useCallback((columnId: number) => {
@@ -119,19 +96,17 @@ export function FunnelSetupDialog({
     );
   }, []);
 
-  // Amount field change
-  const handleAmountFieldChange = useCallback((fieldId: number | null) => {
-    setAmountFieldId(fieldId);
-  }, []);
-
   // Apply
   const handleApply = useCallback(() => {
+    const dealAmountFieldId =
+      currentOverrides?.deal_amount_field_id ?? bestGuessConfig.deal_amount_field_id;
+
     onApply({
       columns,
-      deal_amount_field_id: amountFieldId,
-      metric_mode: amountFieldId != null ? 'amount' : 'count',
+      deal_amount_field_id: dealAmountFieldId,
+      metric_mode: dealAmountFieldId != null ? 'amount' : 'count',
     });
-  }, [onApply, columns, amountFieldId]);
+  }, [onApply, columns, currentOverrides?.deal_amount_field_id, bestGuessConfig.deal_amount_field_id]);
 
   return (
     <Dialog
@@ -148,7 +123,7 @@ export function FunnelSetupDialog({
 
       <DialogContent sx={{ px: 3, pt: 1.5 }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.6 }}>
-          Мы настроили воронку автоматически. Проверьте этапы, итоговые колонки и поле с суммой.
+          Мы настроили воронку автоматически. Проверьте этапы и итоговые колонки.
         </Typography>
 
         {/* ── Boards & columns ────────────────────────── */}
@@ -230,42 +205,6 @@ export function FunnelSetupDialog({
             </Box>
           );
         })}
-
-        {numberFields.length > 0 && (
-          <>
-            {/* ── Metric section ──────────────────────────── */}
-            <Divider sx={{ my: 3 }} />
-
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
-              Что считаем
-            </Typography>
-
-            <FormControl size="small" fullWidth>
-              <InputLabel id="amount-field-label">Поле с суммой</InputLabel>
-              <Select
-                labelId="amount-field-label"
-                label="Поле с суммой"
-                value={amountFieldId ?? ''}
-                onChange={(e) => {
-                  const val = e.target.value as string | number;
-                  handleAmountFieldChange(val === '' ? null : Number(val));
-                }}
-                sx={{ fontSize: '0.875rem' }}
-              >
-                <MenuItem value="">
-                  <Typography variant="body2" color="text.secondary">
-                    Считать по количеству сделок
-                  </Typography>
-                </MenuItem>
-                {numberFields.map((f) => (
-                  <MenuItem key={f.id} value={f.id}>
-                    {f.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </>
-        )}
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>
